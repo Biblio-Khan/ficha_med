@@ -34,30 +34,27 @@ def buscar_mesh(termo_pt):
     except Exception as e:
         return None, f"Erro na tradução: {e}"
 
-    params_search = {
-        "db": "mesh",
-        "term": f"{termo_en}[MeSH Terms]",
-        "retmode": "json",
-        "api_key": API_KEY,
-        "retmax": 1
-    }
-    
     # 1. Busca
+    params_search = {"db": "mesh", "term": f"{termo_en}[MeSH Terms]", "retmode": "json", "api_key": API_KEY, "retmax": 1}
     res_search = requests.get(f"{BASE_URL}esearch.fcgi", params=params_search, headers=HEADERS, timeout=15)
     data_search = extrair_json_seguro(res_search.text)
     ids = data_search.get("esearchresult", {}).get("idlist", [])
-    
-    if not ids:
-        return None, "Termo não encontrado."
+    if not ids: return None, "Termo não encontrado."
         
-    # 2. Detalhes
-    params_fetch = {"db": "mesh", "id": ids[0], "retmode": "json", "api_key": API_KEY}
+    # 2. Detalhamento (O 'efetch' exige ser mais específico)
+    # Adicionamos rettype=json para forçar a API a não enviar XML
+    params_fetch = {"db": "mesh", "id": ids[0], "retmode": "json", "rettype": "json", "api_key": API_KEY}
     res_fetch = requests.get(f"{BASE_URL}efetch.fcgi", params=params_fetch, headers=HEADERS, timeout=15)
+    
+    # DEBUG: Se o efetch falhar, vamos ver o que ele enviou
+    if not res_fetch.text.strip() or res_fetch.text.startswith("<"):
+        return None, f"Erro: A API retornou formato inválido (XML?). Resposta: {res_fetch.text[:50]}"
     
     data_fetch = extrair_json_seguro(res_fetch.text)
     
     # Extração
-    descritor = data_fetch.get("result", {}).get(ids[0], {}).get("terms", [{}])[0].get("name")
+    results = data_fetch.get("result", {})
+    descritor = results.get(ids[0], {}).get("terms", [{}])[0].get("name")
     return descritor, None
 
 # Interface (mantida igual)
