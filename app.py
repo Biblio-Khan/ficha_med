@@ -19,19 +19,52 @@ def inverter_nome(nome_str):
 
 # 🔬 OTIMIZAÇÃO DE BUSCA: Cache de dados e lógica robusta
 @st.cache_data(ttl=3600)
+# 🔬 FUNÇÃO DE INTEGRAÇÃO COM A API DA NLM (Refinada para Depuração)
 def buscar_descritores_mesh(termo_busca):
-    if not termo_busca or len(termo_busca) < 3: return []
+    if not termo_busca:
+        return []
     
-    url = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    params = {"label": termo_busca.strip(), "match": "contains", "limit": 10}
-    headers = {"User-Agent": "BiblioKhanMedicalBot/1.0"}
+    url_api_mesh = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
+    params = {
+        "label": termo_busca.strip(),
+        "match": "contains",
+        "limit": 10
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
     
     try:
-        resp = requests.get(url, params=params, headers=headers, timeout=3)
-        if resp.status_code == 200:
-            return [f"{item.get('resource', '').split('/')[-1]} | {item.get('label')}" 
-                    for item in resp.json() if item.get('label')]
-    except Exception:
+        # Aumentamos o tempo de resposta para 10 segundos
+        resposta = requests.get(url_api_mesh, params=params, headers=headers, timeout=10)
+        
+        # DEBUG: Isso vai aparecer na sua tela quando você clicar em consultar
+        st.write(f"Status da busca: {resposta.status_code}")
+        st.write(f"Dados recebidos: {resposta.text[:200]}") 
+        
+        if resposta.status_code == 200:
+            dados_mesh = resposta.json()
+            
+            # Se a lista estiver vazia, saberemos aqui
+            if not dados_mesh:
+                st.write("A API retornou uma lista vazia.")
+                return []
+                
+            opcoes_formatadas = []
+            for item in dados_mesh:
+                label_ingles = item.get("label", "")
+                resource_url = item.get("resource", "")
+                mesh_id = resource_url.split("/")[-1] if resource_url else ""
+                
+                if label_ingles:
+                    if mesh_id:
+                        opcoes_formatadas.append(f"{mesh_id} | {label_ingles}")
+                    else:
+                        opcoes_formatadas.append(label_ingles)
+            return opcoes_formatadas
+            
+    except Exception as e:
+        st.error(f"Erro na conexão: {e}")
         return []
     return []
 
