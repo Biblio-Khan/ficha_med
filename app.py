@@ -1,11 +1,16 @@
 import streamlit as st
 import requests
+import json
+import re
 from deep_translator import GoogleTranslator
 
 # --- Configurações ---
-# Substitua pela sua chave obtida no NCBI
-API_KEY = "a057b5a9af48c7802e2d144f8fe4583d2508" 
+API_KEY = "SUA_CHAVE_AQUI" 
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+
+def limpar_json(texto):
+    """Remove lixo do início da resposta para evitar erro de parser."""
+    return re.sub(r'^[^{]*', '', texto)
 
 def buscar_mesh(termo_pt):
     # 1. Tradução Técnica
@@ -23,8 +28,9 @@ def buscar_mesh(termo_pt):
     }
     
     try:
-        response_search = requests.get(f"{BASE_URL}esearch.fcgi", params=params_search).json()
-        ids = response_search.get("esearchresult", {}).get("idlist", [])
+        res_search = requests.get(f"{BASE_URL}esearch.fcgi", params=params_search)
+        data_search = json.loads(limpar_json(res_search.text))
+        ids = data_search.get("esearchresult", {}).get("idlist", [])
         
         if not ids:
             return None, "Termo não encontrado na base MeSH."
@@ -36,10 +42,11 @@ def buscar_mesh(termo_pt):
             "retmode": "json",
             "api_key": API_KEY
         }
-        response_fetch = requests.get(f"{BASE_URL}efetch.fcgi", params=params_fetch).json()
+        res_fetch = requests.get(f"{BASE_URL}efetch.fcgi", params=params_fetch)
+        data_fetch = json.loads(limpar_json(res_fetch.text))
         
-        # Extração do nome do descritor
-        descritor = response_fetch.get("result", {}).get(ids[0], {}).get("terms", [{}])[0].get("name")
+        # Extração segura do nome
+        descritor = data_fetch.get("result", {}).get(ids[0], {}).get("terms", [{}])[0].get("name")
         return descritor, None
         
     except Exception as e:
@@ -53,22 +60,15 @@ termo_input = st.text_input("Insira o assunto principal para a ficha:")
 
 if st.button("Gerar Assuntos da Ficha"):
     if termo_input:
-        with st.spinner('Consultando base MeSH e formatando...'):
+        with st.spinner('Consultando base MeSH...'):
             descritor, erro = buscar_mesh(termo_input)
             
             if descritor:
-                st.success("Assunto validado com sucesso!")
-                
-                # --- Formatação AACR2 ---
-                # A lógica de pontuação segue: 1. [Assunto]. 2. [Subdivisão].
+                st.success("Assunto validado!")
                 ficha_formatada = f"1. {descritor}."
-                
                 st.subheader("Bloco de Assuntos na Ficha:")
-                st.text_area("Copie o texto abaixo para sua ficha:", value=ficha_formatada, height=100)
+                st.code(ficha_formatada)
             else:
                 st.error(f"Erro: {erro}")
     else:
         st.warning("Por favor, preencha o campo de assunto.")
-
-st.markdown("---")
-st.caption("Sistema integrado à API NLM/PubMed para validação de descritores MeSH.")
