@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from deep_translator import GoogleTranslator  # <--- Biblioteca de tradução
 
 # =========================================================================
-# 1. CONFIGURAÇÕES TÉCNICAS DA PÁGINA (SEM LOGIN / SEM FIREBASE)
+# 1. CONFIGURAÇÕES TÉCNICAS DA PÁGINA (SEM LOGIN / SEM FIREBASE TEMPORARIAMENTE)
 # =========================================================================
 
 st.set_page_config(
@@ -209,7 +209,8 @@ def buscar_na_tabela_cutter(texto_para_busca, titulo_obra):
         return f"{texto_para_busca.strip().upper()[0]}200{titulo_obra.strip().lower()[0]}"
 
 def calcular_cutter(tipo_autor, autores_lista, entidade="", titulo="", tem_organizador=False, organizador_nome=""):
-    if tipo_autor == "Entidade (Órgão/Instituição)" and entidade: texto_base = entidade
+    if tipo_autor == "Entidade (Órgão/Instituição)" and entidade: 
+        texto_base = entidade
     elif tipo_autor == "Pessoa Física" and autores_lista and any(a.strip() for a in autores_lista):
         autor_principal = [a.strip() for a in autores_lista if a.strip()][0]
         partes = autor_principal.split()
@@ -217,9 +218,13 @@ def calcular_cutter(tipo_autor, autores_lista, entidade="", titulo="", tem_organ
     elif tem_organizador or tipo_autor == "Organizador":
         partes_org = organizador_nome.strip().split()
         texto_base = partes_org[-1] if len(partes_org) > 1 else organizador_nome
-    else: texto_base = "Autor"
+    else: 
+        texto_base = "Autor"
     return buscar_na_tabela_cutter(texto_base, titulo)
 
+# =========================================================================
+# RENDEREZACAO DAS ABAS DO SISTEMA
+# =========================================================================
 tab_gerador, tab_financeiro = st.tabs(["🏥 Gerar Ficha Médica", "💳 Compra e Gestão de Créditos"])
 
 with tab_gerador:
@@ -326,7 +331,17 @@ with tab_gerador:
         entrada_principal, responsabilidade, entrada_por_titulo = formatar_entrada_e_corpo(
             tipo_autor, autores_lista, entidade_nome, titulo, tem_organizador, organizador_nome, tipo_org, tem_tradutor, tradutor_nome
         )
-        cutter = calcular_cutter(tipo_autor, autores_lista, entity_nome=entidade_nome, titulo=titulo, tem_organizador=tem_organizador, organizador_nome=organizador_nome)
+        
+        # MUDANÇA CRÍTICA AQUI: Ajustado de entity_nome para entidade
+        cutter = calcular_cutter(
+            tipo_autor=tipo_autor, 
+            autores_lista=autores_lista, 
+            entidade=entidade_nome, 
+            titulo=titulo, 
+            tem_organizador=tem_organizador, 
+            organizador_nome=organizador_nome
+        )
+        
         dgm = " [recurso eletrônico]" if suporte == "Digital" else ""
         desc_fisica = f"1 recurso online ({paginas} f.) " if suporte == "Digital" else f"{paginas} f."
         bloco_colecao = f" ({colecao_nome.strip()})" if tem_colecao and colecao_nome.strip() else ""
@@ -399,7 +414,12 @@ with tab_financeiro:
                     tg_chat = st.secrets["TELEGRAM_CHAT_ID_MED"]
                     texto_notificacao = f"🏥 *COMPROVANTE MÉDICO COLETADO!*\n\n📧 *User:* {st.session_state['usuario_atual']}\n💰 *Pacote:* {pacote_escolhido}\n📌 *Alvo:* Aba creditos_med"
                     
-                    requests.post(f"https://api.telegram.org/bot{tg_token}/sendPhoto", data={"chat_id": tg_chat, "caption": texto_notificacao, "parse_mode": "Markdown"}, files={"photo": comprovante.getvalue()}, timeout=15)
+                    requests.post(
+                        f"https://api.telegram.org/bot{tg_token}/sendPhoto", 
+                        data={"chat_id": tg_chat, "caption": texto_notificacao, "parse_mode": "Markdown"}, 
+                        files={"photo": comprovante.getvalue()}, 
+                        timeout=15
+                    )
                     st.success("✅ Comprovante enviado para o Telegram!")
-                except Exception as e: st.error(f"Erro: {e}")
-                     
+                except Exception as e: 
+                    st.error(f"Erro: {e}")
