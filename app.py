@@ -15,6 +15,10 @@ from deep_translator import GoogleTranslator  # <--- Nova biblioteca de traduç�
 # 1. CONFIGURAÇÕES TÉCNICAS DA PÁGINA & INICIALIZAÇÃO SEGURA DO FIREBASE
 # =========================================================================
 
+# =========================================================================
+# 1. CONFIGURAÇÕES TÉCNICAS DA PÁGINA & INICIALIZAÇÃO SEGURA DO FIREBASE
+# =========================================================================
+
 st.set_page_config(
     page_title="Gerador de Fichas Médicas - PubMed Hub",
     page_icon="logo_bibliokhan.ico",
@@ -31,8 +35,21 @@ with st.sidebar:
 
 if not firebase_admin._apps:
     try:
+        # Cria uma cópia limpa dos secrets do Firebase
         firebase_secrets = dict(st.secrets["firebase"])
-        firebase_secrets["private_key"] = firebase_secrets["private_key"].replace("\\n", "\n")
+        
+        # Coleta e limpa a private key de impurezas de formatação
+        p_key = firebase_secrets["private_key"].strip()
+        
+        # Remove aspas duplicadas nas pontas caso tenha sido colada com aspas normais
+        if p_key.startswith('"') and p_key.endswith('"'):
+            p_key = p_key[1:-1]
+            
+        # Corrige quebras de linha literais '\\n' para quebras reais '\n'
+        p_key = p_key.replace("\\n", "\n")
+        
+        # Devolve a chave devidamente tratada para o dicionário
+        firebase_secrets["private_key"] = p_key
         
         cred = credentials.Certificate(firebase_secrets)
         firebase_admin.initialize_app(cred)
