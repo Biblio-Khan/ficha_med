@@ -9,12 +9,24 @@ BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 HEADERS = {'User-Agent': 'Mozilla/5.0 (BibliotecarioBot/1.0)'}
 
 def extrair_json_seguro(texto):
-    # Corrige aspas duplicadas que vêm do NCBI
+    """
+    Remove caracteres de controle, aspas duplicadas e extrai o JSON puro.
+    """
+    # 1. Limpeza básica de caracteres que quebram o JSON
     texto_limpo = texto.replace('""', '"')
+    
+    # 2. Encontra o início e o fim do objeto JSON
     match = re.search(r'\{.*\}', texto_limpo, re.DOTALL)
     if match:
-        return json.loads(match.group(0))
-    raise ValueError("JSON inválido.")
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            # Se o JSON ainda estiver malformado, tentamos uma última limpeza
+            # Removemos caracteres de escape inválidos comuns em respostas de API
+            texto_corrigido = re.sub(r'(?<!\\)"', '"', match.group(0))
+            return json.loads(texto_corrigido)
+            
+    raise ValueError(f"Resposta da API não contém um JSON válido. Resposta recebida: {texto[:100]}...")
 
 def buscar_mesh(termo_pt):
     try:
