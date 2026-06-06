@@ -3,3 +3,4 @@ python-docx
 requests
 streamlit
 firebase-admin
+pip install deep-translator requests gspread oauth2client
