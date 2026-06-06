@@ -24,30 +24,26 @@ def buscar_descritores_mesh(termo_busca):
     if not termo_busca:
         return []
     
+    # URL e Parâmetros atualizados para o padrão atual da API MeSH
     url_api_mesh = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
     params = {
-        "label": termo_busca.strip(),
+        "query": termo_busca.strip(),  # Mudança de 'label' para 'query'
         "match": "contains",
-        "limit": 10
+        "limit": 10,
+        "type": "descriptor"           # Adição do tipo explícito
     }
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     
     try:
-        # Aumentamos o tempo de resposta para 10 segundos
         resposta = requests.get(url_api_mesh, params=params, headers=headers, timeout=10)
-        
-        # DEBUG: Isso vai aparecer na sua tela quando você clicar em consultar
-        st.write(f"Status da busca: {resposta.status_code}")
-        st.write(f"Dados recebidos: {resposta.text[:200]}") 
         
         if resposta.status_code == 200:
             dados_mesh = resposta.json()
             
-            # Se a lista estiver vazia, saberemos aqui
+            # Se a lista estiver vazia, retornamos []
             if not dados_mesh:
-                st.write("A API retornou uma lista vazia.")
                 return []
                 
             opcoes_formatadas = []
@@ -63,11 +59,9 @@ def buscar_descritores_mesh(termo_busca):
                         opcoes_formatadas.append(label_ingles)
             return opcoes_formatadas
             
-    except Exception as e:
-        st.error(f"Erro na conexão: {e}")
+    except Exception:
         return []
     return []
-
 # --- CONFIGURAÇÃO E ESTADO ---
 st.set_page_config(page_title="BiblioKhan Editorial", page_icon="🩺", layout="centered")
 
