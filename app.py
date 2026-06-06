@@ -15,47 +15,35 @@ def limpar_json(texto):
     return re.sub(r'^[^{]*', '', texto)
 
 def buscar_mesh(termo_pt):
-    # 1. Tradução
     try:
         termo_en = GoogleTranslator(source='pt', target='en').translate(termo_pt)
     except Exception as e:
         return None, f"Erro na tradução: {e}"
 
-    # 2. Pesquisa na API do MeSH com Tag [MeSH Terms]
-    # A tag garante busca no vocabulário controlado
     params_search = {
         "db": "mesh",
         "term": f"{termo_en}[MeSH Terms]",
         "retmode": "json",
-        "api_key": API_KEY,
-        "retmax": 1
+        "api_key": API_KEY
     }
     
+    # Adicionamos timeout para não travar o streamlit
+    res_search = requests.get(f"{BASE_URL}esearch.fcgi", params=params_search, headers=HEADERS, timeout=10)
+    
+    # DEBUG: Se a resposta estiver vazia, vamos saber agora
+    if not res_search.text:
+        return None, "A API da NLM retornou uma resposta vazia. Verifique sua API_KEY."
+    
     try:
-        res_search = requests.get(f"{BASE_URL}esearch.fcgi", params=params_search, headers=HEADERS)
         data_search = json.loads(limpar_json(res_search.text))
-        ids = data_search.get("esearchresult", {}).get("idlist", [])
-        
-        if not ids:
-            return None, f"Termo '{termo_en}' não localizado como descritor oficial."
-            
-        # 3. Detalhamento (Fetch)
-        mesh_id = ids[0]
-        params_fetch = {
-            "db": "mesh",
-            "id": mesh_id,
-            "retmode": "json",
-            "api_key": API_KEY
-        }
-        res_fetch = requests.get(f"{BASE_URL}efetch.fcgi", params=params_fetch, headers=HEADERS)
-        data_fetch = json.loads(limpar_json(res_fetch.text))
-        
-        # Extração do nome oficial
-        descritor = data_fetch.get("result", {}).get(mesh_id, {}).get("terms", [{}])[0].get("name")
-        return descritor, None
-        
-    except Exception as e:
-        return None, f"Erro na comunicação com a API: {str(e)}"
+    except json.JSONDecodeError:
+        return None, f"Erro de JSON: Conteúdo recebido: {res_search.text[:100]}" # Mostra o início do erro
+    
+    ids = data_search.get("esearchresult", {}).get("idlist", [])
+    if not ids:
+        return None, f"Termo '{termo_en}' não encontrado."
+
+    # ... (resto do fetch igual)
 
 # --- Interface Streamlit ---
 st.set_page_config(page_title="Gerador de Ficha - Medicina")
