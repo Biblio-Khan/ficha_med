@@ -4,7 +4,7 @@ import json
 import re
 from deep_translator import GoogleTranslator
 
-API_KEY = "SUA_CHAVE_AQUI" 
+API_KEY = "a057b5a9af48c7802e2d144f8fe4583d2508" 
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 HEADERS = {'User-Agent': 'Mozilla/5.0 (BibliotecarioBot/1.0)'}
 
