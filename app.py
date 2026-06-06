@@ -4,29 +4,26 @@ import json
 import re
 from deep_translator import GoogleTranslator
 
-API_KEY = "a057b5a9af48c7802e2d144f8fe4583d2508" 
+# --- Configurações ---
+# Se rodar no Streamlit Cloud, use: API_KEY = st.secrets["API_KEY"]
+API_KEY = "SUA_CHAVE_AQUI" 
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 HEADERS = {'User-Agent': 'Mozilla/5.0 (BibliotecarioBot/1.0)'}
 
-def extrair_json_seguro(texto):
-    """
-    Remove caracteres de controle, aspas duplicadas e extrai o JSON puro.
-    """
-    # 1. Limpeza básica de caracteres que quebram o JSON
-    texto_limpo = texto.replace('""', '"')
+def validar_e_extrair_json(texto):
+    """Verifica se o texto é JSON, caso contrário levanta erro explicativo."""
+    # Remove lixo inicial e final
+    match = re.search(r'\{.*\}', texto, re.DOTALL)
+    if not match:
+        # Se começar com '<', é XML (erro comum da NLM)
+        if texto.strip().startswith('<'):
+            raise ValueError("A API retornou XML em vez de JSON. Verifique suas permissões de API.")
+        raise ValueError("Resposta não contém um objeto JSON.")
     
-    # 2. Encontra o início e o fim do objeto JSON
-    match = re.search(r'\{.*\}', texto_limpo, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(0))
-        except json.JSONDecodeError:
-            # Se o JSON ainda estiver malformado, tentamos uma última limpeza
-            # Removemos caracteres de escape inválidos comuns em respostas de API
-            texto_corrigido = re.sub(r'(?<!\\)"', '"', match.group(0))
-            return json.loads(texto_corrigido)
-            
-    raise ValueError(f"Resposta da API não contém um JSON válido. Resposta recebida: {texto[:100]}...")
+    try:
+        return json.loads(match.group(0).replace('""', '"'))
+    except json.JSONDecodeError:
+        raise ValueError("Erro ao decodificar o JSON recebido.")
 
 def buscar_mesh(termo_pt):
     try:
@@ -34,37 +31,53 @@ def buscar_mesh(termo_pt):
     except Exception as e:
         return None, f"Erro na tradução: {e}"
 
-    # 1. Busca
-    params_search = {"db": "mesh", "term": f"{termo_en}[MeSH Terms]", "retmode": "json", "api_key": API_KEY, "retmax": 1}
-    res_search = requests.get(f"{BASE_URL}esearch.fcgi", params=params_search, headers=HEADERS, timeout=15)
-    data_search = extrair_json_seguro(res_search.text)
-    ids = data_search.get("esearchresult", {}).get("idlist", [])
-    if not ids: return None, "Termo não encontrado."
+    # 1. Pesquisa
+    params_search = {
+        "db": "mesh",
+        "term": f"{termo_en}[MeSH Terms]",
+        "retmode": "json",
+        "api_key": API_KEY,
+        "retmax": 1
+    }
+    
+    try:
+        res_search = requests.get(f"{BASE_URL}esearch.fcgi", params=params_search, headers=HEADERS, timeout=15)
+        data_search = validar_e_extrair_json(res_search.text)
+        ids = data_search.get("esearchresult", {}).get("idlist", [])
         
-    # 2. Detalhamento (O 'efetch' exige ser mais específico)
-    # Adicionamos rettype=json para forçar a API a não enviar XML
-    params_fetch = {"db": "mesh", "id": ids[0], "retmode": "json", "rettype": "json", "api_key": API_KEY}
-    res_fetch = requests.get(f"{BASE_URL}efetch.fcgi", params=params_fetch, headers=HEADERS, timeout=15)
-    
-    # DEBUG: Se o efetch falhar, vamos ver o que ele enviou
-    if not res_fetch.text.strip() or res_fetch.text.startswith("<"):
-        return None, f"Erro: A API retornou formato inválido (XML?). Resposta: {res_fetch.text[:50]}"
-    
-    data_fetch = extrair_json_seguro(res_fetch.text)
-    
-    # Extração
-    results = data_fetch.get("result", {})
-    descritor = results.get(ids[0], {}).get("terms", [{}])[0].get("name")
-    return descritor, None
+        if not ids:
+            return None, "Termo não encontrado."
+            
+        # 2. Detalhamento
+        # Nota: O efetch do MeSH pode ser sensível. Garantimos o formato JSON aqui.
+        params_fetch = {"db": "mesh", "id": ids[0], "retmode": "json", "api_key": API_KEY}
+        res_fetch = requests.get(f"{BASE_URL}efetch.fcgi", params=params_fetch, headers=HEADERS, timeout=15)
+        
+        data_fetch = validar_e_extrair_json(res_fetch.text)
+        
+        # Extração do nome
+        results = data_fetch.get("result", {})
+        descritor = results.get(ids[0], {}).get("terms", [{}])[0].get("name")
+        
+        return descritor, None
+        
+    except Exception as e:
+        return None, str(e)
 
-# Interface (mantida igual)
+# --- Interface ---
+st.set_page_config(page_title="Gerador de Ficha", layout="centered")
 st.title("Gerador de Ficha Catalográfica")
+
 termo = st.text_input("Assunto principal:")
-if st.button("Buscar"):
+
+if st.button("Buscar Descritor"):
     if termo:
-        descritor, erro = buscar_mesh(termo)
-        if descritor:
-            st.success(f"Descritor: {descritor}")
-            st.code(f"1. {descritor}.")
-        else:
-            st.error(erro)
+        with st.spinner('Consultando base MeSH...'):
+            descritor, erro = buscar_mesh(termo)
+            if descritor:
+                st.success(f"Descritor oficial: {descritor}")
+                st.code(f"1. {descritor}.")
+            else:
+                st.error(f"Erro: {erro}")
+    else:
+        st.warning("Preencha o campo.")
