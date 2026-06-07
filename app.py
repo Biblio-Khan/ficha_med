@@ -3,6 +3,8 @@ import pandas as pd
 import requests
 import io
 from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # --- CONFIGURAÇÕES ---
 st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="centered")
@@ -58,7 +60,7 @@ cidade = st.text_input("Cidade:")
 editora = st.text_input("Editora:")
 ano = st.text_input("Ano:")
 
-# [Autores e Colaboradores mantidos como antes...]
+# Autores e Colaboradores
 st.write("### 👥 Autores")
 if st.button("➕ Adicionar Autor"): st.session_state.autores.append("")
 for i, aut in enumerate(st.session_state.autores):
@@ -84,52 +86,50 @@ if st.button("Consultar NLM"): st.session_state.opcoes_mesh = buscar_descritores
 escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh)
 if st.button("Adicionar descritor à ficha"):
     if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
+st.write("#### Descritores Escolhidos:", ", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))))
 
-st.write("#### Descritores Escolhidos:")
-st.write(", ".join(st.session_state.lista_assuntos))
-
-# --- GERAÇÃO AACR2 ---
-if st.button("🚀 Gerar Ficha CIP (AACR2)"):
+# --- LÓGICA DE DADOS ---
+def get_ficha_data():
     autores_v = [a for a in st.session_state.autores if a.strip()]
-    entrada = formatar_entrada_autor(autores_v[0]) if len(autores_v) <= 3 else titulo.upper()
-    
-    # Cálculo Cutter: Letra Sobrenome(Maiúsc) + ID + Letra Título(Minúsc)
+    entrada = formatar_entrada_autor(autores_v[0]) if autores_v else "AUTOR NÃO INFORMADO"
     sobrenome_letra = autores_v[0].split()[-1][0].upper() if autores_v else "A"
     cutter_id = calcular_cutter(autores_v[0]) if autores_v else "000"
     primeira_letra_titulo = remover_artigos(titulo)[0].lower() if titulo else "a"
     classificacao_cutter = f"{sobrenome_letra}{cutter_id}{primeira_letra_titulo}"
-
-    # 1. Filtra assuntos únicos (mantendo a ordem)
-    assuntos_unicos = list(dict.fromkeys(st.session_state.lista_assuntos))
     
-    # 2. Monta a lista de descritores (Assuntos)
-    # A norma pede que os assuntos sejam numerados em arábicos
-    descritores = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(assuntos_unicos)]
-    
-    # 3. Monta as entradas secundárias (Título + Colaboradores)
-    entradas_secundarias = [f"I. Título."]
-    romanos_colab = ["II.", "III.", "IV.", "V."]
+    assuntos = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(dict.fromkeys(st.session_state.lista_assuntos))]
+    entradas = ["I. Título."]
+    romanos = ["II.", "III.", "IV.", "V."]
     for i, colab in enumerate(st.session_state.colaboradores):
-        if colab["nome"]:
-            nome_inv = formatar_entrada_autor(colab['nome'])
-            entradas_secundarias.append(f"{romanos_colab[min(i, 3)]} {nome_inv} ({colab['tipo']}).")
+        if colab["nome"]: entradas.append(f"{romanos[min(i, 3)]} {formatar_entrada_autor(colab['nome'])} ({colab['tipo']}).")
     
-    # 4. Unifica em uma única lista para exibir na ficha
-    lista_final = descritores + entradas_secundarias
+    return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
-    # --- HTML DA FICHA ---
-    html_ficha = f"""
-    <div style="border: 1px solid #000; padding: 20px; font-family: monospace;">
-        <div style="text-align: left; margin-bottom: 10px;">
-            <div>{classe_principal}</div>
-            <div>{classificacao_cutter}</div>
-        </div>
-        <p><b>{entrada}.</b></p>
-        <p style="text-indent: 30px;">{titulo} / {', '.join(autores_v) if len(autores_v) <= 3 else autores_v[0] + ' et al.'}. – {cidade} : {editora}, {ano}.</p>
-        <p style="text-indent: 30px;">{volumes + ' ; ' if volumes else ''}{paginas}.</p>
-        {'<p style="text-indent: 30px;">Título original: ' + titulo_original + '</p>' if titulo_original else ''}
-        <p style="text-indent: 30px;">ISBN {isbn if isbn else "..."}</p>
-        <p style="text-indent: 30px;">{' '.join(lista_final)}</p>
-    </div>
-    """
-    st.markdown(html_ficha, unsafe_allow_html=True)
+# --- PRÉ-VISUALIZAÇÃO ---
+entrada, class_cutter, auts, lista_final = get_ficha_data()
+ficha_html = f"""
+<div style="border: 1px solid #000; padding: 20px; font-family: monospace;">
+    <div>{classe_principal}<br>{class_cutter}</div>
+    <p><b>{entrada}.</b></p>
+    <p>{titulo} / {', '.join(auts) if len(auts) <= 3 else auts[0] + ' et al.'}. – {cidade} : {editora}, {ano}.</p>
+    <p>{volumes + ' ; ' if volumes else ''}{paginas}.</p>
+    {'<p>Título original: ' + titulo_original + '</p>' if titulo_original else ''}
+    <p>ISBN {isbn if isbn else "..."}</p>
+    <p>{' '.join(lista_final)}</p>
+</div>
+"""
+st.subheader("👁️ Pré-visualização"); st.markdown(ficha_html, unsafe_allow_html=True)
+
+# --- DOWNLOAD WORD ---
+if st.button("📥 Gerar Documento Word"):
+    doc = Document()
+    p = doc.add_paragraph()
+    p.add_run(f"{classe_principal}\n{class_cutter}").bold = True
+    doc.add_paragraph(f"{entrada}.\n{titulo} / {', '.join(auts)}...")
+    doc.add_paragraph(f"{volumes} {paginas}")
+    if titulo_original: doc.add_paragraph(f"Título original: {titulo_original}")
+    doc.add_paragraph(f"ISBN {isbn}")
+    doc.add_paragraph(" ".join(lista_final))
+    bio = io.BytesIO()
+    doc.save(bio)
+    st.download_button("Baixar Agora", data=bio.getvalue(), file_name="ficha.docx")
