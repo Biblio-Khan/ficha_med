@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 import io
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # --- CONFIGURAÇÕES ---
@@ -118,7 +118,7 @@ def get_ficha_data():
 
 # --- ME SH E PRÉ-VISUALIZAÇÃO (COLUNA DA DIREITA) ---
 with col_dir:
-    # Linha 5: MeSH (Movidopara a direita)
+    # Linha 5: MeSH
     st.write("### 🔍 Pesquisa MeSH")
     c_mesh1, c_mesh2 = st.columns([3, 1])
     with c_mesh1:
@@ -141,7 +141,7 @@ with col_dir:
     
     entrada, class_cutter, auts, lista_final = get_ficha_data()
 
-    # Preparando strings para não imprimir partes vazias caso o usuário não preencha
+    # Preparando strings para exibição oficial
     autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
     volumes_str = f"{volumes} ; " if volumes else ""
     titulo_original_str = f"\nTítulo original: {titulo_original}" if titulo_original else ""
@@ -157,20 +157,45 @@ ISBN {isbn if isbn else "..."}
 {' '.join(lista_final)}
 """
 
-    # Exibe a ficha limpa dentro de uma "caixa" cinza de formatação com botão de copiar automático
+    # Exibe a ficha limpa dentro de uma caixa cinza com botão de copiar automático
     st.markdown(f"```text\n{ficha_texto}\n```")
 
-    # --- DOWNLOAD WORD ---
-    st.write("") # Dá um pequeno espaço visual
+    # --- DOWNLOAD WORD (CORRIGIDO E FORMATADO) ---
+    st.write("") 
     if st.button("📥 Gerar Documento Word", use_container_width=True):
         doc = Document()
-        p = doc.add_paragraph()
-        p.add_run(f"{classe_principal}\n{class_cutter}").bold = True
-        doc.add_paragraph(f"{entrada}.\n{titulo} / {', '.join(auts)}...")
-        doc.add_paragraph(f"{volumes} {paginas}")
-        if titulo_original: doc.add_paragraph(f"Título original: {titulo_original}")
-        doc.add_paragraph(f"ISBN {isbn}")
-        doc.add_paragraph(" ".join(lista_final))
+        
+        # Cria uma tabela 1x1 que funcionará exatamente como a moldura/caixa da ficha
+        table = doc.add_table(rows=1, cols=1)
+        table.style = 'Table Grid'
+        cell = table.cell(0, 0)
+        
+        # Define a largura padrão internacional para fichas catalográficas (aprox. 13.5cm)
+        table.columns[0].width = Inches(5.3)
+        cell.width = Inches(5.3)
+        
+        # Divide o texto linha por linha para inserir identado dentro do Word
+        linhas_ficha = ficha_texto.strip().split('\n')
+        
+        for idx, linha in enumerate(linhas_ficha):
+            if idx == 0:
+                p = cell.paragraphs[0]
+            else:
+                p = cell.add_paragraph()
+                
+            # Configurações de espaçamento interno da ficha
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after = Pt(1)
+            p.paragraph_format.line_spacing = 1.15
+            
+            run = p.add_run(linha)
+            run.font.name = 'Arial'
+            run.font.size = Pt(10)
+            
+            # Deixa os índices de classificação (CDD e Cutter) em negrito
+            if idx in [0, 1]:
+                run.bold = True
+                
         bio = io.BytesIO()
         doc.save(bio)
-        st.download_button("Baixar Agora", data=bio.getvalue(), file_name="ficha.docx", use_container_width=True)
+        st.download_button("Baixar Ficha Formatada", data=bio.getvalue(), file_name="ficha_catalografica.docx", use_container_width=True)
