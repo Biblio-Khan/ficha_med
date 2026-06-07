@@ -49,8 +49,6 @@ def buscar_descritores_mesh(termo):
 st.title("🩺 BiblioKhan Médicas")
 
 titulo = st.text_input("Título da obra:")
-eh_estrangeiro = st.checkbox("A obra é traduzida (título original diferente)?")
-titulo_original = st.text_input("Título original:") if eh_estrangeiro else ""
 classe_principal = st.text_input("Classe principal (Ex: 610):")
 volumes = st.text_input("Volume ou Edição:")
 isbn = st.text_input("ISBN:")
@@ -58,22 +56,49 @@ paginas = st.text_input("Páginas:")
 cidade = st.text_input("Cidade:")
 editora = st.text_input("Editora:")
 ano = st.text_input("Ano:")
+eh_estrangeiro = st.checkbox("A obra é traduzida (título original diferente)?")
+titulo_original = st.text_input("Título original:") if eh_estrangeiro else ""
 
-# [Campos dinâmicos permanecem iguais aos anteriores...]
-st.write("### 👥 Autores"); st.write("### ✍️ Colaboradores"); st.write("### 🔍 Pesquisa MeSH e Assuntos")
+# Autores
+st.write("### 👥 Autores")
+if st.button("➕ Adicionar Autor"): st.session_state.autores.append("")
+for i, aut in enumerate(st.session_state.autores):
+    c1, c2 = st.columns([8, 1])
+    with c1: st.session_state.autores[i] = st.text_input(f"Autor {i+1}", value=aut, key=f"aut_{i}")
+    with c2:
+        if st.button("❌", key=f"del_aut_{i}") and len(st.session_state.autores) > 1:
+            st.session_state.autores.pop(i); st.rerun()
+
+# Colaboradores
+st.write("### ✍️ Colaboradores")
+if st.button("➕ Adicionar Colaborador"): st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
+for i, colab in enumerate(st.session_state.colaboradores):
+    c1, c2, c3 = st.columns([4, 3, 1])
+    with c1: colab["nome"] = st.text_input("Nome", value=colab["nome"], key=f"colab_nome_{i}")
+    with c2: colab["tipo"] = st.selectbox("Função", ["trad.", "org.", "comp."], key=f"colab_tipo_{i}")
+    with c3:
+        if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
+
+# MeSH
+st.write("### 🔍 Pesquisa MeSH")
+termo_mesh = st.text_input("Buscar Descritor MeSH:")
+if st.button("Consultar NLM"): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
+escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh)
+if st.button("Adicionar descritor à ficha"):
+    if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
 
 # --- GERAÇÃO AACR2 ---
 if st.button("🚀 Gerar Ficha CIP (AACR2)"):
     autores_v = [a for a in st.session_state.autores if a.strip()]
     entrada = formatar_entrada_autor(autores_v[0]) if len(autores_v) <= 3 else titulo.upper()
     
-    # Cálculo Cutter: Letra Sobrenome + ID + Letra Título (sem artigo)
+    # Cálculos Cutter
     sobrenome_letra = autores_v[0].split()[-1][0].upper() if autores_v else "A"
     cutter_id = calcular_cutter(autores_v[0]) if autores_v else "000"
     primeira_letra_titulo = remover_artigos(titulo)[0].upper() if titulo else "A"
     classificacao_cutter = f"{sobrenome_letra}{cutter_id}{primeira_letra_titulo}"
 
-    # Assuntos e Entradas Secundárias
+    # Entradas Secundárias
     lista_final = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(st.session_state.lista_assuntos)]
     lista_final.append("I. Título.")
     romanos_colab = ["II.", "III.", "IV.", "V."]
@@ -81,7 +106,6 @@ if st.button("🚀 Gerar Ficha CIP (AACR2)"):
         if colab["nome"]:
             lista_final.append(f"{romanos_colab[min(i, 3)]} {formatar_entrada_autor(colab['nome'])} ({colab['tipo']}).")
 
-    # --- HTML DA FICHA ---
     html_ficha = f"""
     <div style="border: 1px solid #000; padding: 20px; font-family: monospace; position: relative;">
         <div style="text-align: right; margin-bottom: 10px;">
