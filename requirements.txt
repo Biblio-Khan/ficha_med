@@ -4,3 +4,4 @@ requests
 streamlit
 firebase-admin
 deep-translator
+python-docx
