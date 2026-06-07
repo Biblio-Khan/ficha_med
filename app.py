@@ -138,30 +138,29 @@ with col_dir:
             
     st.caption("**Descritores Escolhidos:** " + (", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))) if st.session_state.lista_assuntos else "Nenhum ainda."))
 
-    st.divider() # Linha para separar a pesquisa da pré-visualização
+    st.divider()
 
     st.subheader("👁️ Pré-visualização")
     
     entrada, class_cutter, auts, lista_final = get_ficha_data()
 
-    # Preparando strings para exibição oficial
+    # Preparando strings
     autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
     volumes_str = f"{volumes} ; " if volumes else ""
     titulo_original_str = f"\nTítulo original: {titulo_original}" if titulo_original else ""
     colecao_str = f" ({colecao_serie})" if colecao_serie else ""
 
+    # Espaçamento manual aqui para simular visualmente na tela do Streamlit
     ficha_texto = f"""{classe_principal}
-{class_cutter}
+{class_cutter}       {entrada}.
+             {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
+             {volumes_str}{paginas}.{colecao_str}{titulo_original_str}
+             ISBN {isbn if isbn else "..."}
 
-{entrada}.
-{titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
-{volumes_str}{paginas}.{colecao_str}{titulo_original_str}
-ISBN {isbn if isbn else "..."}
-
-{' '.join(lista_final)}
+             {' '.join(lista_final)}
 """
 
-    # Exibe a ficha limpa dentro de uma caixa cinza com botão de copiar automático
+    # Exibe a ficha na tela
     st.markdown(f"```text\n{ficha_texto}\n```")
 
     # --- DOWNLOAD WORD ---
@@ -169,7 +168,7 @@ ISBN {isbn if isbn else "..."}
     if st.button("📥 Gerar Documento Word", use_container_width=True):
         doc = Document()
         
-        # Centraliza a tabela inteira na página do Word
+        # Cria e centraliza a tabela na página do Word
         table = doc.add_table(rows=1, cols=1)
         table.style = 'Table Grid'
         table.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -178,30 +177,55 @@ ISBN {isbn if isbn else "..."}
         table.columns[0].width = Inches(5.3)
         cell.width = Inches(5.3)
         
-        linhas_ficha = ficha_texto.strip().split('\n')
+        # --- PARÁGRAFO 1: Classe (CDD/CDU) ---
+        p0 = cell.paragraphs[0]
+        p0.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p0.paragraph_format.space_after = Pt(0)
+        p0.paragraph_format.line_spacing = 1.15
         
-        for idx, linha in enumerate(linhas_ficha):
-            if idx == 0:
-                p = cell.paragraphs[0]
-            else:
-                p = cell.add_paragraph()
-                
-            # Garante que o texto dentro da ficha fique perfeitamente à esquerda/justificado
-            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(1)
-            p.paragraph_format.line_spacing = 1.15
-            
-            # Adiciona os recuos necessários para as linhas de catalogação
-            if idx >= 3:
-                p.paragraph_format.left_indent = Inches(0.5)
-            
-            run = p.add_run(linha)
-            run.font.name = 'Arial'
-            run.font.size = Pt(10)
-            
-            if idx in [0, 1]:
-                run.bold = True
+        r0 = p0.add_run(classe_principal)
+        r0.font.name = 'Arial'
+        r0.font.size = Pt(10)
+        r0.bold = True
+        
+        # --- PARÁGRAFO 2: Cutter e Entrada (Autor) na MESMA LINHA ---
+        p1 = cell.add_paragraph()
+        p1.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p1.paragraph_format.space_after = Pt(0)
+        p1.paragraph_format.line_spacing = 1.15
+        # Define o espaçamento exato da tabulação (Tab) onde começará o nome
+        p1.paragraph_format.tab_stops.add_tab_stop(Inches(0.7)) 
+        
+        r1_cutter = p1.add_run(class_cutter)
+        r1_cutter.font.name = 'Arial'
+        r1_cutter.font.size = Pt(10)
+        r1_cutter.bold = True
+        
+        p1.add_run("\t") # Pula para a marcação de 0.7 polegadas
+        
+        r1_ent = p1.add_run(f"{entrada}.")
+        r1_ent.font.name = 'Arial'
+        r1_ent.font.size = Pt(10)
+        
+        # --- PARÁGRAFO 3: Restante das informações indentadas embaixo ---
+        p2 = cell.add_paragraph()
+        p2.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p2.paragraph_format.space_after = Pt(0)
+        p2.paragraph_format.line_spacing = 1.15
+        # Recuo global de 0.7 polegadas, empurrando todo o texto da descrição para debaixo do Autor
+        p2.paragraph_format.left_indent = Inches(0.7) 
+        
+        corpo_linhas = [
+            f"{titulo} / {autores_str}. – {cidade} : {editora}, {ano}.",
+            f"{volumes_str}{paginas}.{colecao_str}{titulo_original_str}",
+            f"ISBN {isbn if isbn else '...'}",
+            "",
+            ' '.join(lista_final)
+        ]
+        
+        r2 = p2.add_run("\n".join(corpo_linhas))
+        r2.font.name = 'Arial'
+        r2.font.size = Pt(10)
                 
         bio = io.BytesIO()
         doc.save(bio)
