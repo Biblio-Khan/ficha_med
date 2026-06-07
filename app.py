@@ -31,6 +31,7 @@ st.title("🩺 BiblioKhan Médicas")
 
 titulo = st.text_input("Título da obra:")
 volumes = st.text_input("Volume ou Edição (Ex: v. 2, 3. ed.):")
+isbn = st.text_input("ISBN:")
 eh_estrangeiro = st.checkbox("A obra é traduzida (título original diferente)?")
 titulo_original = st.text_input("Título original:") if eh_estrangeiro else ""
 
@@ -75,12 +76,12 @@ for i, ass in enumerate(st.session_state.lista_assuntos):
 if st.button("🚀 Gerar Ficha CIP (AACR2)"):
     autores_v = [a for a in st.session_state.autores if a.strip()]
     
-    # 1. Entrada Principal
+    # Entrada Principal
     if len(autores_v) == 0: entrada = "AUTOR NÃO INFORMADO"
     elif len(autores_v) <= 3: entrada = formatar_entrada_autor(autores_v[0])
     else: entrada = titulo.upper()
     
-    # 2. Assuntos e Romanos (Lógica Corrigida)
+    # Assuntos e Entradas Secundárias (Lógica corrigida para numeração romana)
     lista_final = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(st.session_state.lista_assuntos)]
     romanos = ["I.", "II.", "III.", "IV.", "V.", "VI.", "VII.", "VIII.", "IX."]
     
@@ -90,11 +91,10 @@ if st.button("🚀 Gerar Ficha CIP (AACR2)"):
             idx_r = len(lista_final)
             lista_final.append(f"{romanos[idx_r]} {nome_inv} ({colab['tipo']}).")
     
-    # Título sempre como primeiro romano (I.) se não houver colaboradores, ou na sequência correta
     lista_final.append(f"{romanos[len(lista_final)]} Título.")
     
-    # 3. Montagem da Descrição
-    desc_fisica = f"{volumes + ', ' if volumes else ''}{paginas}."
+    # Descrição Física com ISBN
+    desc_fisica = f"{volumes + ' ; ' if volumes else ''}{paginas}."
     
     html_ficha = f"""
     <div style="border: 1px solid #000; padding: 20px; font-family: monospace;">
@@ -102,6 +102,7 @@ if st.button("🚀 Gerar Ficha CIP (AACR2)"):
         <p style="text-indent: 30px;">{titulo} / {', '.join(autores_v) if len(autores_v) <= 3 else autores_v[0] + ' et al.'}. – {cidade or '[s.l.]'} : {editora or '[s.n.]'}, {ano or '[s.d.]'}.</p>
         {'<p style="text-indent: 30px;">Título original: ' + titulo_original + '</p>' if eh_estrangeiro else ''}
         <p style="text-indent: 30px;">{desc_fisica}</p>
+        <p style="text-indent: 30px;">ISBN {isbn if isbn else "..."}</p>
         <p style="text-indent: 30px;">{' '.join(lista_final)}</p>
         <div style="text-align: right;">{num_class}</div>
     </div>
