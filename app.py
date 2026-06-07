@@ -30,6 +30,7 @@ def buscar_descritores_mesh(termo):
 st.title("🩺 BiblioKhan Médicas")
 
 titulo = st.text_input("Título da obra:")
+volumes = st.text_input("Volume ou Edição (Ex: v. 2, 3. ed.):")
 eh_estrangeiro = st.checkbox("A obra é traduzida (título original diferente)?")
 titulo_original = st.text_input("Título original:") if eh_estrangeiro else ""
 
@@ -79,7 +80,7 @@ if st.button("🚀 Gerar Ficha CIP (AACR2)"):
     elif len(autores_v) <= 3: entrada = formatar_entrada_autor(autores_v[0])
     else: entrada = titulo.upper()
     
-    # 2. Assuntos e Entradas Secundárias (Romanos)
+    # 2. Assuntos e Romanos (Lógica Corrigida)
     lista_final = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(st.session_state.lista_assuntos)]
     romanos = ["I.", "II.", "III.", "IV.", "V.", "VI.", "VII.", "VIII.", "IX."]
     
@@ -89,23 +90,25 @@ if st.button("🚀 Gerar Ficha CIP (AACR2)"):
             idx_r = len(lista_final)
             lista_final.append(f"{romanos[idx_r]} {nome_inv} ({colab['tipo']}).")
     
-    idx_t = len(lista_final)
-    lista_final.append(f"{romanos[idx_t]} Título.")
+    # Título sempre como primeiro romano (I.) se não houver colaboradores, ou na sequência correta
+    lista_final.append(f"{romanos[len(lista_final)]} Título.")
     
-    # 3. HTML
+    # 3. Montagem da Descrição
+    desc_fisica = f"{volumes + ', ' if volumes else ''}{paginas}."
+    
     html_ficha = f"""
     <div style="border: 1px solid #000; padding: 20px; font-family: monospace;">
         <p><b>{entrada}.</b></p>
         <p style="text-indent: 30px;">{titulo} / {', '.join(autores_v) if len(autores_v) <= 3 else autores_v[0] + ' et al.'}. – {cidade or '[s.l.]'} : {editora or '[s.n.]'}, {ano or '[s.d.]'}.</p>
         {'<p style="text-indent: 30px;">Título original: ' + titulo_original + '</p>' if eh_estrangeiro else ''}
-        <p style="text-indent: 30px;">{paginas}.</p>
+        <p style="text-indent: 30px;">{desc_fisica}</p>
         <p style="text-indent: 30px;">{' '.join(lista_final)}</p>
         <div style="text-align: right;">{num_class}</div>
     </div>
     """
     st.markdown(html_ficha, unsafe_allow_html=True)
     
-    # Exportação DOCX simples
+    # Exportação Word
     doc = Document()
     doc.add_paragraph("Ficha Catalográfica").bold = True
     doc.add_paragraph(html_ficha.replace('<p style="text-indent: 30px;">', '\n    ').replace('<p>', '\n').replace('<b>', '').replace('</b>', '').replace('</div>', '').replace('<div style="text-align: right;">', '\n'))
