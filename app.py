@@ -7,7 +7,6 @@ from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # --- CONFIGURAÇÕES ---
-# Alterado layout para 'wide' para que as colunas caibam bem na tela
 st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="wide")
 
 # Inicialização de Estados
@@ -52,46 +51,72 @@ def buscar_descritores_mesh(termo):
 st.title("🩺 BiblioKhan Médicas")
 
 # DIVISÃO DE COLUNAS (Esquerda para inputs, Direita para a ficha)
-col_esq, col_dir = st.columns([1.3, 1], gap="large")
+col_esq, col_dir = st.columns([1.5, 1], gap="large")
 
 with col_esq:
-    titulo = st.text_input("Título da obra:")
-    titulo_original = st.text_input("Título original (se traduzida):")
-    classe_principal = st.text_input("Classe principal (Ex: 610):")
-    volumes = st.text_input("Volume ou Edição:")
-    isbn = st.text_input("ISBN:")
-    paginas = st.text_input("Páginas:")
-    cidade = st.text_input("Cidade:")
-    editora = st.text_input("Editora:")
-    ano = st.text_input("Ano:")
+    st.subheader("📚 Dados da Obra")
+    
+    # Linha 1: Títulos
+    c_tit1, c_tit2 = st.columns(2)
+    with c_tit1: titulo = st.text_input("Título da obra:")
+    with c_tit2: titulo_original = st.text_input("Título original (se traduzida):")
+    
+    # Linha 2: Publicação
+    c_pub1, c_pub2, c_pub3 = st.columns(3)
+    with c_pub1: cidade = st.text_input("Cidade:")
+    with c_pub2: editora = st.text_input("Editora:")
+    with c_pub3: ano = st.text_input("Ano:")
+    
+    # Linha 3: Descrição Física e Classificação
+    c_desc1, c_desc2, c_desc3, c_desc4 = st.columns(4)
+    with c_desc1: volumes = st.text_input("Volume/Edição:")
+    with c_desc2: paginas = st.text_input("Páginas:")
+    with c_desc3: isbn = st.text_input("ISBN:")
+    with c_desc4: classe_principal = st.text_input("Classe Principal (Ex: 610):")
 
-    # Autores e Colaboradores
-    st.write("### 👥 Autores")
-    if st.button("➕ Adicionar Autor"): st.session_state.autores.append("")
-    for i, aut in enumerate(st.session_state.autores):
-        c1, c2 = st.columns([8, 1])
-        with c1: st.session_state.autores[i] = st.text_input(f"Autor {i+1}", value=aut, key=f"aut_{i}")
-        with c2:
-            if st.button("❌", key=f"del_aut_{i}") and len(st.session_state.autores) > 1:
-                st.session_state.autores.pop(i); st.rerun()
+    st.divider() # Linha divisória visual
 
-    st.write("### ✍️ Colaboradores")
-    if st.button("➕ Adicionar Colaborador"): st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
-    for i, colab in enumerate(st.session_state.colaboradores):
-        c1, c2, c3 = st.columns([4, 3, 1])
-        with c1: colab["nome"] = st.text_input("Nome", value=colab["nome"], key=f"colab_nome_{i}")
-        with c2: colab["tipo"] = st.selectbox("Função", ["trad.", "org.", "comp."], key=f"colab_tipo_{i}")
-        with c3:
-            if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
+    # Linha 4: Responsabilidade (Autores e Colaboradores lado a lado)
+    col_autores, col_colab = st.columns(2)
+    
+    with col_autores:
+        st.write("### 👥 Autores")
+        if st.button("➕ Adicionar Autor", use_container_width=True): st.session_state.autores.append("")
+        for i, aut in enumerate(st.session_state.autores):
+            c1, c2 = st.columns([8, 2])
+            with c1: st.session_state.autores[i] = st.text_input(f"Autor {i+1}", value=aut, key=f"aut_{i}", label_visibility="collapsed")
+            with c2:
+                if st.button("❌", key=f"del_aut_{i}") and len(st.session_state.autores) > 1:
+                    st.session_state.autores.pop(i); st.rerun()
 
-    # MeSH
+    with col_colab:
+        st.write("### ✍️ Colaboradores")
+        if st.button("➕ Adicionar Colaborador", use_container_width=True): st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
+        for i, colab in enumerate(st.session_state.colaboradores):
+            c1, c2, c3 = st.columns([5, 3, 2])
+            with c1: colab["nome"] = st.text_input("Nome", value=colab["nome"], key=f"colab_nome_{i}", label_visibility="collapsed")
+            with c2: colab["tipo"] = st.selectbox("Função", ["trad.", "org.", "comp."], key=f"colab_tipo_{i}", label_visibility="collapsed")
+            with c3:
+                if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
+
+    st.divider()
+
+    # Linha 5: MeSH
     st.write("### 🔍 Pesquisa MeSH")
-    termo_mesh = st.text_input("Buscar Descritor MeSH:")
-    if st.button("Consultar NLM"): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
-    escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh)
-    if st.button("Adicionar descritor à ficha"):
-        if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
-    st.write("#### Descritores Escolhidos:", ", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))))
+    c_mesh1, c_mesh2 = st.columns([3, 1])
+    with c_mesh1:
+        termo_mesh = st.text_input("Buscar Descritor MeSH:", label_visibility="collapsed", placeholder="Digite o termo MeSH aqui...")
+    with c_mesh2:
+        if st.button("Consultar NLM", use_container_width=True): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
+    
+    c_mesh3, c_mesh4 = st.columns([3, 1])
+    with c_mesh3:
+        escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh, label_visibility="collapsed")
+    with c_mesh4:
+        if st.button("Adicionar à ficha", use_container_width=True):
+            if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
+            
+    st.caption("**Descritores Escolhidos:** " + (", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))) if st.session_state.lista_assuntos else "Nenhum ainda."))
 
 # --- LÓGICA DE DADOS ---
 def get_ficha_data():
