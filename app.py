@@ -99,25 +99,6 @@ with col_esq:
             with c3:
                 if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
 
-    st.divider()
-
-    # Linha 5: MeSH
-    st.write("### 🔍 Pesquisa MeSH")
-    c_mesh1, c_mesh2 = st.columns([3, 1])
-    with c_mesh1:
-        termo_mesh = st.text_input("Buscar Descritor MeSH:", label_visibility="collapsed", placeholder="Digite o termo MeSH aqui...")
-    with c_mesh2:
-        if st.button("Consultar NLM", use_container_width=True): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
-    
-    c_mesh3, c_mesh4 = st.columns([3, 1])
-    with c_mesh3:
-        escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh, label_visibility="collapsed")
-    with c_mesh4:
-        if st.button("Adicionar à ficha", use_container_width=True):
-            if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
-            
-    st.caption("**Descritores Escolhidos:** " + (", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))) if st.session_state.lista_assuntos else "Nenhum ainda."))
-
 # --- LÓGICA DE DADOS ---
 def get_ficha_data():
     autores_v = [a for a in st.session_state.autores if a.strip()]
@@ -135,8 +116,27 @@ def get_ficha_data():
     
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
-# --- PRÉ-VISUALIZAÇÃO (COLUNA DA DIREITA) ---
+# --- ME SH E PRÉ-VISUALIZAÇÃO (COLUNA DA DIREITA) ---
 with col_dir:
+    # Linha 5: MeSH (Movidopara a direita)
+    st.write("### 🔍 Pesquisa MeSH")
+    c_mesh1, c_mesh2 = st.columns([3, 1])
+    with c_mesh1:
+        termo_mesh = st.text_input("Buscar Descritor MeSH:", label_visibility="collapsed", placeholder="Digite o termo MeSH aqui...")
+    with c_mesh2:
+        if st.button("Consultar NLM", use_container_width=True): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
+    
+    c_mesh3, c_mesh4 = st.columns([3, 1])
+    with c_mesh3:
+        escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh, label_visibility="collapsed")
+    with c_mesh4:
+        if st.button("Adicionar à ficha", use_container_width=True):
+            if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
+            
+    st.caption("**Descritores Escolhidos:** " + (", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))) if st.session_state.lista_assuntos else "Nenhum ainda."))
+
+    st.divider() # Linha para separar a pesquisa da pré-visualização
+
     st.subheader("👁️ Pré-visualização")
     
     entrada, class_cutter, auts, lista_final = get_ficha_data()
