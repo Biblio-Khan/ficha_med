@@ -6,89 +6,85 @@ from docx import Document
 # --- CONFIGURAÇÕES ---
 st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="centered")
 
+if 'lista_assuntos' not in st.session_state: st.session_state.lista_assuntos = []
+if 'autores' not in st.session_state: st.session_state.autores = [""]
 if 'opcoes_mesh' not in st.session_state: st.session_state.opcoes_mesh = []
-if 'lista_assuntos' not in st.session_state: st.session_state.lista_assuntos = [""]
 
 # --- FUNÇÕES ---
-def obter_entrada_autor(autor_str):
-    if not autor_str: return "AUTOR NÃO INFORMADO"
-    partes = [p.strip() for p in autor_str.split(',')]
-    palavras = partes[0].split()
-    return f"{palavras[-1].upper()}, {' '.join(palavras[:-1])}" if len(palavras) > 1 else partes[0].upper()
+def formatar_entrada_autor(nome):
+    partes = nome.strip().split()
+    return f"{partes[-1].upper()}, {' '.join(partes[:-1])}" if len(partes) > 1 else nome.upper()
 
 @st.cache_data(ttl=3600)
-def buscar_descritores_mesh(termo_busca):
-    if not termo_busca or len(termo_busca) < 3: return []
+def buscar_descritores_mesh(termo):
     url = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    params = {"query": termo_busca.strip(), "match": "contains", "limit": 10, "type": "descriptor"}
-    headers = {"User-Agent": "BiblioKhanMedicalBot/1.0"}
+    params = {"query": termo.strip(), "match": "contains", "limit": 10, "type": "descriptor"}
     try:
-        resp = requests.get(url, params=params, headers=headers, timeout=10)
-        return [f"{item.get('resource', '').split('/')[-1]} | {item.get('label')}" for item in resp.json()] if resp.status_code == 200 else []
+        resp = requests.get(url, params=params, timeout=10)
+        return [f"{i.get('resource', '').split('/')[-1]} | {i.get('label')}" for i in resp.json()] if resp.status_code == 200 else []
     except: return []
 
 # --- INTERFACE ---
 st.title("🩺 BiblioKhan Médicas")
 
-# Campos Básicos
-titulo = st.text_input("Título:")
-autor = st.text_input("Autor:")
-col1, col2 = st.columns(2)
-with col1:
-    cidade = st.text_input("Cidade:")
-    editora = st.text_input("Editora:")
-with col2:
-    ano = st.text_input("Ano:")
-    paginas = st.text_input("Páginas:")
+titulo = st.text_input("Título da obra:")
 
-st.write("---")
-st.write("### 🔍 Pesquisa MeSH e Assuntos")
-
-# Busca MeSH
-termo_mesh = st.text_input("Pesquisar termo na base MeSH:")
-if st.button("Consultar MeSH"):
-    st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
-
-escolha = st.selectbox("Selecione o descritor para adicionar:", ["-- Escolha para adicionar --"] + st.session_state.opcoes_mesh)
-
-if st.button("➕ Adicionar descritor à lista de assuntos"):
-    if escolha != "-- Escolha para adicionar --":
-        desc = escolha.split(" | ")[1].strip()
-        # Se o primeiro campo estiver vazio, substitui; caso contrário, adiciona um novo
-        if len(st.session_state.lista_assuntos) == 1 and st.session_state.lista_assuntos[0] == "":
-            st.session_state.lista_assuntos[0] = desc
-        else:
-            st.session_state.lista_assuntos.append(desc)
-        st.rerun()
-
-st.write("#### Assuntos atuais:")
-for i, assunto in enumerate(st.session_state.lista_assuntos):
-    c1, c2 = st.columns([4, 1])
+st.write("### 👥 Autores")
+for i, aut in enumerate(st.session_state.autores):
+    c1, c2 = st.columns([8, 1])
     with c1:
-        st.session_state.lista_assuntos[i] = st.text_input(f"Assunto {i+1}", value=assunto, key=f"assunto_{i}")
+        st.session_state.autores[i] = st.text_input(f"Autor {i+1}", value=aut, key=f"aut_{i}")
     with c2:
-        if st.button("❌", key=f"del_{i}") and len(st.session_state.lista_assuntos) > 1:
-            st.session_state.lista_assuntos.pop(i)
-            st.rerun()
+        if st.button("❌", key=f"del_aut_{i}") and len(st.session_state.autores) > 1:
+            st.session_state.autores.pop(i); st.rerun()
+if st.button("➕ Adicionar Autor"): st.session_state.autores.append(""); st.rerun()
 
-# --- GERAÇÃO ---
+# (Campos de Publicação e Assuntos...)
+cidade = st.text_input("Cidade:")
+editora = st.text_input("Editora:")
+ano = st.text_input("Ano:")
+paginas = st.text_input("Páginas:")
+num_class = st.text_input("Código de Classificação:")
+
+st.write("### 🔍 Pesquisa MeSH e Assuntos")
+termo_mesh = st.text_input("Buscar Descritor MeSH:")
+if st.button("Consultar NLM"): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
+escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh)
+if st.button("Adicionar descritor"):
+    if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
+
+for i, ass in enumerate(st.session_state.lista_assuntos):
+    c1, c2 = st.columns([8, 1])
+    with c1: st.session_state.lista_assuntos[i] = st.text_input(f"Assunto {i+1}", value=ass, key=f"ass_{i}")
+    with c2: 
+        if st.button("❌", key=f"del_ass_{i}"): st.session_state.lista_assuntos.pop(i); st.rerun()
+
+# --- GERAÇÃO AACR2 ---
 if st.button("🚀 Gerar Ficha CIP (AACR2)"):
-    assuntos_str = ""
-    for idx, ass in enumerate(st.session_state.lista_assuntos):
-        if ass.strip():
-            assuntos_str += f"{idx+1}. {ass.strip().capitalize()}. "
-    assuntos_str += "I. Título."
+    autores_validos = [a for a in st.session_state.autores if a.strip()]
+    num_autores = len(autores_validos)
     
-    entrada_autor = obter_entrada_autor(autor)
-    linha_titulo = f"{titulo} / {autor}"
+    # Lógica de Entrada Principal
+    if num_autores == 0:
+        entrada = "AUTOR NÃO INFORMADO"
+        resp = ""
+    elif num_autores <= 3:
+        entrada = formatar_entrada_autor(autores_validos[0])
+        resp = ", ".join(autores_validos)
+    else:
+        entrada = titulo.upper()
+        resp = f"{autores_validos[0]} et al."
+    
+    assuntos_str = " ".join([f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(st.session_state.lista_assuntos)]) + " I. Título."
     imprenta = f"{cidade or '[s.l.]'} : {editora or '[s.n.]'}, {ano or '[s.d.]'}."
     
-    html_ficha = (
-        f'<div style="border: 1px solid #000; padding: 20px; font-family: monospace;">'
-        f'<p><b>{entrada_autor}.</b></p>'
-        f'<p style="text-indent: 30px;">{linha_titulo}. – {imprenta}</p>'
-        f'<p style="text-indent: 30px;">{paginas}.</p>'
-        f'<p style="text-indent: 30px;">{assuntos_str}</p>'
-        f'</div>'
-    )
+    html_ficha = f"""
+    <div style="border: 1px solid #000; padding: 20px; font-family: monospace;">
+        <p><b>{entrada}.</b></p>
+        <p style="text-indent: 30px;">{titulo} / {resp}. – {imprenta}</p>
+        <p style="text-indent: 30px;">{paginas}.</p>
+        <p style="text-indent: 30px;">{assuntos_str}</p>
+        <div style="text-align: right;">CDU: {num_class}</div>
+    </div>
+    """
     st.markdown(html_ficha, unsafe_allow_html=True)
