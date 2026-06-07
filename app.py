@@ -49,6 +49,7 @@ def buscar_descritores_mesh(termo):
 st.title("🩺 BiblioKhan Médicas")
 
 titulo = st.text_input("Título da obra:")
+titulo_original = st.text_input("Título original (se traduzida):")
 classe_principal = st.text_input("Classe principal (Ex: 610):")
 volumes = st.text_input("Volume ou Edição:")
 isbn = st.text_input("ISBN:")
@@ -56,10 +57,8 @@ paginas = st.text_input("Páginas:")
 cidade = st.text_input("Cidade:")
 editora = st.text_input("Editora:")
 ano = st.text_input("Ano:")
-eh_estrangeiro = st.checkbox("A obra é traduzida (título original diferente)?")
-titulo_original = st.text_input("Título original:") if eh_estrangeiro else ""
 
-# Autores
+# [Autores e Colaboradores mantidos como antes...]
 st.write("### 👥 Autores")
 if st.button("➕ Adicionar Autor"): st.session_state.autores.append("")
 for i, aut in enumerate(st.session_state.autores):
@@ -69,7 +68,6 @@ for i, aut in enumerate(st.session_state.autores):
         if st.button("❌", key=f"del_aut_{i}") and len(st.session_state.autores) > 1:
             st.session_state.autores.pop(i); st.rerun()
 
-# Colaboradores
 st.write("### ✍️ Colaboradores")
 if st.button("➕ Adicionar Colaborador"): st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
 for i, colab in enumerate(st.session_state.colaboradores):
@@ -87,15 +85,18 @@ escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes
 if st.button("Adicionar descritor à ficha"):
     if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
 
+st.write("#### Descritores Escolhidos:")
+st.write(", ".join(st.session_state.lista_assuntos))
+
 # --- GERAÇÃO AACR2 ---
 if st.button("🚀 Gerar Ficha CIP (AACR2)"):
     autores_v = [a for a in st.session_state.autores if a.strip()]
     entrada = formatar_entrada_autor(autores_v[0]) if len(autores_v) <= 3 else titulo.upper()
     
-    # Cálculos Cutter
+    # Cálculo Cutter: Letra Sobrenome(Maiúsc) + ID + Letra Título(Minúsc)
     sobrenome_letra = autores_v[0].split()[-1][0].upper() if autores_v else "A"
     cutter_id = calcular_cutter(autores_v[0]) if autores_v else "000"
-    primeira_letra_titulo = remover_artigos(titulo)[0].upper() if titulo else "A"
+    primeira_letra_titulo = remover_artigos(titulo)[0].lower() if titulo else "a"
     classificacao_cutter = f"{sobrenome_letra}{cutter_id}{primeira_letra_titulo}"
 
     # Entradas Secundárias
@@ -107,15 +108,15 @@ if st.button("🚀 Gerar Ficha CIP (AACR2)"):
             lista_final.append(f"{romanos_colab[min(i, 3)]} {formatar_entrada_autor(colab['nome'])} ({colab['tipo']}).")
 
     html_ficha = f"""
-    <div style="border: 1px solid #000; padding: 20px; font-family: monospace; position: relative;">
-        <div style="text-align: right; margin-bottom: 10px;">
+    <div style="border: 1px solid #000; padding: 20px; font-family: monospace;">
+        <div style="text-align: left; margin-bottom: 10px;">
             <div>{classe_principal}</div>
             <div>{classificacao_cutter}</div>
         </div>
         <p><b>{entrada}.</b></p>
         <p style="text-indent: 30px;">{titulo} / {', '.join(autores_v) if len(autores_v) <= 3 else autores_v[0] + ' et al.'}. – {cidade} : {editora}, {ano}.</p>
         <p style="text-indent: 30px;">{volumes + ' ; ' if volumes else ''}{paginas}.</p>
-        {'<p style="text-indent: 30px;">Título original: ' + titulo_original + '</p>' if eh_estrangeiro else ''}
+        {'<p style="text-indent: 30px;">Título original: ' + titulo_original + '</p>' if titulo_original else ''}
         <p style="text-indent: 30px;">ISBN {isbn if isbn else "..."}</p>
         <p style="text-indent: 30px;">{' '.join(lista_final)}</p>
     </div>
