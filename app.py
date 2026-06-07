@@ -76,6 +76,9 @@ with col_esq:
 
     st.divider() # Linha divisória visual
 
+    # Linha Nova: Coleção ou Série (Inserida acima de Colaboradores)
+    colecao_serie = st.text_input("Coleção ou Série (Opcional):")
+
     # Linha 4: Responsabilidade (Autores e Colaboradores lado a lado)
     col_autores, col_colab = st.columns(2)
     
@@ -145,13 +148,14 @@ with col_dir:
     autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
     volumes_str = f"{volumes} ; " if volumes else ""
     titulo_original_str = f"\nTítulo original: {titulo_original}" if titulo_original else ""
+    colecao_str = f" ({colecao_serie})" if colecao_serie else ""
 
     ficha_texto = f"""{classe_principal}
 {class_cutter}
 
 {entrada}.
 {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
-{volumes_str}{paginas}.{titulo_original_str}
+{volumes_str}{paginas}.{colecao_str}{titulo_original_str}
 ISBN {isbn if isbn else "..."}
 
 {' '.join(lista_final)}
@@ -160,21 +164,20 @@ ISBN {isbn if isbn else "..."}
     # Exibe a ficha limpa dentro de uma caixa cinza com botão de copiar automático
     st.markdown(f"```text\n{ficha_texto}\n```")
 
-    # --- DOWNLOAD WORD (CORRIGIDO E FORMATADO) ---
+    # --- DOWNLOAD WORD ---
     st.write("") 
     if st.button("📥 Gerar Documento Word", use_container_width=True):
         doc = Document()
         
-        # Cria uma tabela 1x1 que funcionará exatamente como a moldura/caixa da ficha
+        # Centraliza a tabela inteira na página do Word
         table = doc.add_table(rows=1, cols=1)
         table.style = 'Table Grid'
-        cell = table.cell(0, 0)
+        table.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
-        # Define a largura padrão internacional para fichas catalográficas (aprox. 13.5cm)
+        cell = table.cell(0, 0)
         table.columns[0].width = Inches(5.3)
         cell.width = Inches(5.3)
         
-        # Divide o texto linha por linha para inserir identado dentro do Word
         linhas_ficha = ficha_texto.strip().split('\n')
         
         for idx, linha in enumerate(linhas_ficha):
@@ -183,16 +186,20 @@ ISBN {isbn if isbn else "..."}
             else:
                 p = cell.add_paragraph()
                 
-            # Configurações de espaçamento interno da ficha
+            # Garante que o texto dentro da ficha fique perfeitamente à esquerda/justificado
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(1)
             p.paragraph_format.line_spacing = 1.15
+            
+            # Adiciona os recuos necessários para as linhas de catalogação
+            if idx >= 3:
+                p.paragraph_format.left_indent = Inches(0.5)
             
             run = p.add_run(linha)
             run.font.name = 'Arial'
             run.font.size = Pt(10)
             
-            # Deixa os índices de classificação (CDD e Cutter) em negrito
             if idx in [0, 1]:
                 run.bold = True
                 
