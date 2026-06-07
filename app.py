@@ -99,14 +99,25 @@ if st.button("🚀 Gerar Ficha CIP (AACR2)"):
     primeira_letra_titulo = remover_artigos(titulo)[0].lower() if titulo else "a"
     classificacao_cutter = f"{sobrenome_letra}{cutter_id}{primeira_letra_titulo}"
 
-    # Entradas Secundárias
-    lista_final = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(st.session_state.lista_assuntos)]
-    lista_final.append("I. Título.")
+    # 1. Filtra assuntos únicos (mantendo a ordem)
+    assuntos_unicos = list(dict.fromkeys(st.session_state.lista_assuntos))
+    
+    # 2. Monta a lista de descritores (Assuntos)
+    # A norma pede que os assuntos sejam numerados em arábicos
+    descritores = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(assuntos_unicos)]
+    
+    # 3. Monta as entradas secundárias (Título + Colaboradores)
+    entradas_secundarias = [f"I. Título."]
     romanos_colab = ["II.", "III.", "IV.", "V."]
     for i, colab in enumerate(st.session_state.colaboradores):
         if colab["nome"]:
-            lista_final.append(f"{romanos_colab[min(i, 3)]} {formatar_entrada_autor(colab['nome'])} ({colab['tipo']}).")
+            nome_inv = formatar_entrada_autor(colab['nome'])
+            entradas_secundarias.append(f"{romanos_colab[min(i, 3)]} {nome_inv} ({colab['tipo']}).")
+    
+    # 4. Unifica em uma única lista para exibir na ficha
+    lista_final = descritores + entradas_secundarias
 
+    # --- HTML DA FICHA ---
     html_ficha = f"""
     <div style="border: 1px solid #000; padding: 20px; font-family: monospace;">
         <div style="text-align: left; margin-bottom: 10px;">
