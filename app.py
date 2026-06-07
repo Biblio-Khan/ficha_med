@@ -7,7 +7,8 @@ from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # --- CONFIGURAÇÕES ---
-st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="centered")
+# Alterado layout para 'wide' para que as colunas caibam bem na tela
+st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="wide")
 
 # Inicialização de Estados
 if 'lista_assuntos' not in st.session_state: st.session_state.lista_assuntos = []
@@ -50,43 +51,47 @@ def buscar_descritores_mesh(termo):
 # --- INTERFACE ---
 st.title("🩺 BiblioKhan Médicas")
 
-titulo = st.text_input("Título da obra:")
-titulo_original = st.text_input("Título original (se traduzida):")
-classe_principal = st.text_input("Classe principal (Ex: 610):")
-volumes = st.text_input("Volume ou Edição:")
-isbn = st.text_input("ISBN:")
-paginas = st.text_input("Páginas:")
-cidade = st.text_input("Cidade:")
-editora = st.text_input("Editora:")
-ano = st.text_input("Ano:")
+# DIVISÃO DE COLUNAS (Esquerda para inputs, Direita para a ficha)
+col_esq, col_dir = st.columns([1.3, 1], gap="large")
 
-# Autores e Colaboradores
-st.write("### 👥 Autores")
-if st.button("➕ Adicionar Autor"): st.session_state.autores.append("")
-for i, aut in enumerate(st.session_state.autores):
-    c1, c2 = st.columns([8, 1])
-    with c1: st.session_state.autores[i] = st.text_input(f"Autor {i+1}", value=aut, key=f"aut_{i}")
-    with c2:
-        if st.button("❌", key=f"del_aut_{i}") and len(st.session_state.autores) > 1:
-            st.session_state.autores.pop(i); st.rerun()
+with col_esq:
+    titulo = st.text_input("Título da obra:")
+    titulo_original = st.text_input("Título original (se traduzida):")
+    classe_principal = st.text_input("Classe principal (Ex: 610):")
+    volumes = st.text_input("Volume ou Edição:")
+    isbn = st.text_input("ISBN:")
+    paginas = st.text_input("Páginas:")
+    cidade = st.text_input("Cidade:")
+    editora = st.text_input("Editora:")
+    ano = st.text_input("Ano:")
 
-st.write("### ✍️ Colaboradores")
-if st.button("➕ Adicionar Colaborador"): st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
-for i, colab in enumerate(st.session_state.colaboradores):
-    c1, c2, c3 = st.columns([4, 3, 1])
-    with c1: colab["nome"] = st.text_input("Nome", value=colab["nome"], key=f"colab_nome_{i}")
-    with c2: colab["tipo"] = st.selectbox("Função", ["trad.", "org.", "comp."], key=f"colab_tipo_{i}")
-    with c3:
-        if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
+    # Autores e Colaboradores
+    st.write("### 👥 Autores")
+    if st.button("➕ Adicionar Autor"): st.session_state.autores.append("")
+    for i, aut in enumerate(st.session_state.autores):
+        c1, c2 = st.columns([8, 1])
+        with c1: st.session_state.autores[i] = st.text_input(f"Autor {i+1}", value=aut, key=f"aut_{i}")
+        with c2:
+            if st.button("❌", key=f"del_aut_{i}") and len(st.session_state.autores) > 1:
+                st.session_state.autores.pop(i); st.rerun()
 
-# MeSH
-st.write("### 🔍 Pesquisa MeSH")
-termo_mesh = st.text_input("Buscar Descritor MeSH:")
-if st.button("Consultar NLM"): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
-escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh)
-if st.button("Adicionar descritor à ficha"):
-    if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
-st.write("#### Descritores Escolhidos:", ", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))))
+    st.write("### ✍️ Colaboradores")
+    if st.button("➕ Adicionar Colaborador"): st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
+    for i, colab in enumerate(st.session_state.colaboradores):
+        c1, c2, c3 = st.columns([4, 3, 1])
+        with c1: colab["nome"] = st.text_input("Nome", value=colab["nome"], key=f"colab_nome_{i}")
+        with c2: colab["tipo"] = st.selectbox("Função", ["trad.", "org.", "comp."], key=f"colab_tipo_{i}")
+        with c3:
+            if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
+
+    # MeSH
+    st.write("### 🔍 Pesquisa MeSH")
+    termo_mesh = st.text_input("Buscar Descritor MeSH:")
+    if st.button("Consultar NLM"): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
+    escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh)
+    if st.button("Adicionar descritor à ficha"):
+        if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
+    st.write("#### Descritores Escolhidos:", ", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))))
 
 # --- LÓGICA DE DADOS ---
 def get_ficha_data():
@@ -105,16 +110,18 @@ def get_ficha_data():
     
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
-# --- PRÉ-VISUALIZAÇÃO ---
-entrada, class_cutter, auts, lista_final = get_ficha_data()
+# --- PRÉ-VISUALIZAÇÃO (COLUNA DA DIREITA) ---
+with col_dir:
+    st.subheader("👁️ Pré-visualização")
+    
+    entrada, class_cutter, auts, lista_final = get_ficha_data()
 
-# Preparando strings para não imprimir partes vazias caso o usuário não preencha
-autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
-volumes_str = f"{volumes} ; " if volumes else ""
-titulo_original_str = f"\nTítulo original: {titulo_original}" if titulo_original else ""
+    # Preparando strings para não imprimir partes vazias caso o usuário não preencha
+    autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
+    volumes_str = f"{volumes} ; " if volumes else ""
+    titulo_original_str = f"\nTítulo original: {titulo_original}" if titulo_original else ""
 
-# Visualização da ficha em TEXTO PURO (sem tags HTML)
-ficha_texto = f"""{classe_principal}
+    ficha_texto = f"""{classe_principal}
 {class_cutter}
 
 {entrada}.
@@ -125,19 +132,20 @@ ISBN {isbn if isbn else "..."}
 {' '.join(lista_final)}
 """
 
-st.subheader("👁️ Pré-visualização")
-st.text(ficha_texto)
+    # Exibe a ficha limpa dentro de uma "caixa" cinza de formatação com botão de copiar automático
+    st.markdown(f"```text\n{ficha_texto}\n```")
 
-# --- DOWNLOAD WORD ---
-if st.button("📥 Gerar Documento Word"):
-    doc = Document()
-    p = doc.add_paragraph()
-    p.add_run(f"{classe_principal}\n{class_cutter}").bold = True
-    doc.add_paragraph(f"{entrada}.\n{titulo} / {', '.join(auts)}...")
-    doc.add_paragraph(f"{volumes} {paginas}")
-    if titulo_original: doc.add_paragraph(f"Título original: {titulo_original}")
-    doc.add_paragraph(f"ISBN {isbn}")
-    doc.add_paragraph(" ".join(lista_final))
-    bio = io.BytesIO()
-    doc.save(bio)
-    st.download_button("Baixar Agora", data=bio.getvalue(), file_name="ficha.docx")
+    # --- DOWNLOAD WORD ---
+    st.write("") # Dá um pequeno espaço visual
+    if st.button("📥 Gerar Documento Word", use_container_width=True):
+        doc = Document()
+        p = doc.add_paragraph()
+        p.add_run(f"{classe_principal}\n{class_cutter}").bold = True
+        doc.add_paragraph(f"{entrada}.\n{titulo} / {', '.join(auts)}...")
+        doc.add_paragraph(f"{volumes} {paginas}")
+        if titulo_original: doc.add_paragraph(f"Título original: {titulo_original}")
+        doc.add_paragraph(f"ISBN {isbn}")
+        doc.add_paragraph(" ".join(lista_final))
+        bio = io.BytesIO()
+        doc.save(bio)
+        st.download_button("Baixar Agora", data=bio.getvalue(), file_name="ficha.docx", use_container_width=True)
