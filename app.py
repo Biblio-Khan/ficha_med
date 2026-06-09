@@ -316,24 +316,26 @@ with tab_principal:
             doc.save(bio)
             st.download_button("📥 Baixar Fichas em Lote (.docx)", data=bio.getvalue(), file_name="lote_fichas_catalograficas.docx", use_container_width=True)
 
-# --- ABA DE CONSULTA INDEPENDENTE (LEITURA DE PDF INTERNO) ---
+# --- ABA DE CONSULTA INDEPENDENTE (LEITURA DE PDF CORRIGIDA PARA CHROME) ---
 with tab_cdd:
     st.subheader("📖 Documento Guia de Consulta")
     st.write("Consulte o PDF completo da classificação diretamente aqui dentro do sistema.")
     
-    # Nome esperado do arquivo PDF do usuário
     pdf_nome_arquivo = "cdd_medica.pdf"
     
     if os.path.exists(pdf_nome_arquivo):
         try:
-            # Leitura do arquivo PDF e conversão para string base64
             with open(pdf_nome_arquivo, "rb") as f:
                 base64_pdf = base64.b64encode(f.read()).decode('utf-8')
             
-            # Incorporação do PDF usando uma tag iframe do HTML
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="900" style="border: 1px solid #ccc; border-radius: 5px;"></iframe>'
+            # Mudança crucial: Usamos <object> e <embed> em vez de <iframe> para burlar a restrição do Chrome
+            pdf_display = f"""
+            <object data="data:application/pdf;base64,{base64_pdf}" type="application/pdf" width="100%" height="900px">
+                <embed src="data:application/pdf;base64,{base64_pdf}" type="application/pdf" width="100%" height="900px"/>
+            </object>
+            """
             
-            # Renderização do componente de tela cheia para o PDF
+            # Renderização segura
             st.markdown(pdf_display, unsafe_allow_html=True)
             
         except Exception as e:
