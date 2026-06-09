@@ -39,13 +39,42 @@ def calcular_cutter(nome_autor):
     except: return "????"
 
 @st.cache_data(ttl=3600)
-def buscar_descritores_mesh(termo):
-    url = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    params = {"query": termo.strip(), "match": "contains", "limit": 10, "type": "descriptor"}
+def buscar_descritores_mesh_com_sinonimos(termo):
+    # 1. Primeiro, buscamos o ID do termo usando a busca de lookup
+    url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
+    params = {"query": termo.strip(), "match": "contains", "limit": 5, "type": "descriptor"}
+    
     try:
-        resp = requests.get(url, params=params, timeout=10)
-        return [f"{i.get('resource', '').split('/')[-1]} | {i.get('label')}" for i in resp.json()] if resp.status_code == 200 else []
-    except: return []
+        resp = requests.get(url_lookup, params=params, timeout=10)
+        if resp.status_code != 200 or not resp.json():
+            return []
+
+        # Pega o ID do primeiro resultado (o mais relevante)
+        primeiro_resultado = resp.json()[0]
+        descriptor_id = primeiro_resultado.get('resource', '').split('/')[-1]
+
+        # 2. Agora, buscamos os DETALHES deste ID específico para pegar os sinônimos
+        url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
+        resp_details = requests.get(url_details, timeout=10)
+        
+        if resp_details.status_code == 200:
+            data = resp_details.json()
+            
+            # Extrai o termo principal e a lista de Entry Terms (sinônimos)
+            termo_principal = data.get('label')
+            entry_terms = [item.get('term') for item in data.get('entryTerms', [])]
+            
+            return {
+                "id": descriptor_id,
+                "termo": termo_principal,
+                "sinonimos": entry_terms
+            }
+            
+        return {"id": descriptor_id, "termo": "Erro ao buscar detalhes", "sinonimos": []}
+
+    except Exception as e:
+        print(f"Erro na consulta: {e}")
+        return []
 
 # --- INTERFACE ---
 st.title("🩺 BiblioKhan Médicas")
