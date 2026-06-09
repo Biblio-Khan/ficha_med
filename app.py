@@ -39,43 +39,32 @@ def calcular_cutter(nome_autor):
     except: return "????"
 
 @st.cache_data(ttl=3600)
-def buscar_descritores_mesh_com_sinonimos(termo):
-    # 1. Primeiro, buscamos o ID do termo usando a busca de lookup
+def buscar_descritores_mesh(termo):
+    # 1. Busca inicial para pegar o ID do descritor
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    params = {"query": termo.strip(), "match": "contains", "limit": 5, "type": "descriptor"}
+    params = {"query": termo.strip(), "match": "contains", "limit": 1, "type": "descriptor"}
     
     try:
         resp = requests.get(url_lookup, params=params, timeout=10)
         if resp.status_code != 200 or not resp.json():
-            return []
+            return None
 
-        # Pega o ID do primeiro resultado (o mais relevante)
-        primeiro_resultado = resp.json()[0]
-        descriptor_id = primeiro_resultado.get('resource', '').split('/')[-1]
+        descriptor_id = resp.json()[0].get('resource', '').split('/')[-1]
 
-        # 2. Agora, buscamos os DETALHES deste ID específico para pegar os sinônimos
+        # 2. Busca de detalhes para pegar o termo oficial e os sinônimos
         url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
         resp_details = requests.get(url_details, timeout=10)
         
         if resp_details.status_code == 200:
             data = resp_details.json()
-            
-            # Extrai o termo principal e a lista de Entry Terms (sinônimos)
-            termo_principal = data.get('label')
-            entry_terms = [item.get('term') for item in data.get('entryTerms', [])]
-            
+            # Retorna um dicionário com o termo oficial e os sinônimos
             return {
-                "id": descriptor_id,
-                "termo": termo_principal,
-                "sinonimos": entry_terms
+                "termo_oficial": data.get('label'),
+                "sinonimos": [item.get('term') for item in data.get('entryTerms', [])]
             }
-            
-        return {"id": descriptor_id, "termo": "Erro ao buscar detalhes", "sinonimos": []}
-
-    except Exception as e:
-        print(f"Erro na consulta: {e}")
-        return []
-
+        return None
+    except:
+        return None
 # --- INTERFACE ---
 st.title("🩺 BiblioKhan Médicas")
 
@@ -148,22 +137,16 @@ def get_ficha_data():
     
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
-# --- ME SH E PRÉ-VISUALIZAÇÃO (COLUNA DA DIREITA) ---
-with col_dir:
-    # Linha 5: MeSH
-    st.write("### 🔍 Pesquisa MeSH")
-    c_mesh1, c_mesh2 = st.columns([3, 1])
-    with c_mesh1:
-        termo_mesh = st.text_input("Buscar Descritor MeSH:", label_visibility="collapsed", placeholder="Digite o termo MeSH aqui...")
-    with c_mesh2:
-        if st.button("Consultar NLM", use_container_width=True): st.session_state.opcoes_mesh = buscar_descritores_mesh(termo_mesh)
+resultado = buscar_descritores_mesh("termo_digitado_pelo_usuario")
+
+if resultado:
+    st.write(f"### Termo Autorizado: {resultado['termo_oficial']}")
     
-    c_mesh3, c_mesh4 = st.columns([3, 1])
-    with c_mesh3:
-        escolha = st.selectbox("Selecione:", ["-- Escolha --"] + st.session_state.opcoes_mesh, label_visibility="collapsed")
-    with c_mesh4:
-        if st.button("Adicionar à ficha", use_container_width=True):
-            if escolha != "-- Escolha --": st.session_state.lista_assuntos.append(escolha.split(" | ")[1].strip()); st.rerun()
+    # Exibe os sinônimos de forma organizada
+    if resultado['sinonimos']:
+        with st.expander("Ver sinônimos (Entry Terms)"):
+            for s in resultado['sinonimos']:
+                st.write(f"- {s}")
             
     st.caption("**Descritores Escolhidos:** " + (", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))) if st.session_state.lista_assuntos else "Nenhum ainda."))
 
