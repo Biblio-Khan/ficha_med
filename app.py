@@ -13,7 +13,6 @@ st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="w
 if 'lista_assuntos' not in st.session_state: st.session_state.lista_assuntos = []
 if 'autores' not in st.session_state: st.session_state.autores = [""]
 if 'colaboradores' not in st.session_state: st.session_state.colaboradores = []
-# Novos estados para controlar a quantidade de buscas no MeSH
 if 'mesh_limite' not in st.session_state: st.session_state.mesh_limite = 5
 if 'ultimo_termo' not in st.session_state: st.session_state.ultimo_termo = ""
 
@@ -43,7 +42,6 @@ def calcular_cutter(nome_autor):
 
 @st.cache_data(ttl=3600)
 def buscar_descritores_mesh(termo, limite=5):
-    # O limite agora é dinâmico (recebe o valor da função)
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
     params = {"query": termo.strip(), "match": "contains", "limit": limite, "type": "descriptor"}
     
@@ -150,14 +148,12 @@ with col_esq:
             with c3:
                 if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
 
-    st.divider()
-
-    # --- SEÇÃO DE BUSCA ATUALIZADA (COM BOTÃO CARREGAR MAIS) ---
+with col_dir:
+    # --- SEÇÃO DE BUSCA (POSICIONADA NO TOPO) ---
     st.subheader("🔍 Assuntos e Indexação (MeSH)")
     termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:")
     
     if termo_busca:
-        # Se a pessoa digitou uma palavra nova, reseta a busca para 5 resultados
         if termo_busca != st.session_state.ultimo_termo:
             st.session_state.ultimo_termo = termo_busca
             st.session_state.mesh_limite = 5
@@ -166,10 +162,8 @@ with col_esq:
         
         if resultados:
             st.success(f"Mostrando até {st.session_state.mesh_limite} termos no banco MeSH.")
-            
             opcoes_nomes = [r["termo_oficial"] for r in resultados]
             escolha = st.selectbox("Selecione o termo mais adequado:", opcoes_nomes)
-            
             termo_escolhido = next(r for r in resultados if r["termo_oficial"] == escolha)
             
             st.markdown(f"### 📍 Termo Autorizado: **{termo_escolhido['termo_oficial']}**")
@@ -182,20 +176,15 @@ with col_esq:
             else:
                 st.info("Nenhum sinônimo direto encontrado para este termo.")
             
-            # Divide os botões lado a lado
             col_add, col_mais = st.columns(2)
-            
             with col_add:
                 if st.button("➕ Adicionar como Assunto", use_container_width=True):
                     st.session_state.lista_assuntos.append(termo_escolhido['termo_oficial'])
                     st.rerun()
-            
             with col_mais:
-                # O botão de carregar mais só aparece se a API trouxer a quantidade máxima solicitada 
-                # (sinal de que podem haver ainda mais resultados escondidos)
                 if len(resultados) == st.session_state.mesh_limite:
                     if st.button("🔄 Buscar mais resultados", use_container_width=True):
-                        st.session_state.mesh_limite += 5 # Puxa mais 5 da próxima vez
+                        st.session_state.mesh_limite += 5
                         st.rerun()
         else:
             st.warning("Termo não encontrado ou erro na conexão.")
@@ -207,7 +196,9 @@ with col_esq:
         st.session_state.lista_assuntos = []
         st.rerun()
 
-with col_dir:
+    st.divider()
+
+    # --- PRÉ-VISUALIZAÇÃO (POSICIONADA ABAIXO DA BUSCA) ---
     st.subheader("👁️ Pré-visualização")
     
     entrada, class_cutter, auts, lista_final = get_ficha_data(
@@ -236,7 +227,6 @@ with col_dir:
     st.write("") 
     if st.button("📥 Gerar Documento Word", use_container_width=True):
         doc = Document()
-        
         table = doc.add_table(rows=1, cols=1)
         table.style = 'Table Grid'
         table.alignment = WD_ALIGN_PARAGRAPH.CENTER
