@@ -49,28 +49,38 @@ def buscar_descritores_mesh(termo):
         if resp.status_code != 200 or not resp.json():
             return None
 
-        # Pegamos o ID e o Label diretamente do primeiro resultado (mais seguro)
         primeiro_resultado = resp.json()[0]
         descriptor_id = primeiro_resultado.get('resource', '').split('/')[-1]
         termo_oficial = primeiro_resultado.get('label', termo) 
 
-        # 2. Busca de detalhes APENAS para pegar os sinônimos
+        # 2. Busca de detalhes para resgatar os sinônimos
         url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
         resp_details = requests.get(url_details, timeout=10)
         
-        sinonimos = []
+        sinonimos_encontrados = []
         if resp_details.status_code == 200:
             data = resp_details.json()
-            sinonimos = [item.get('term') for item in data.get('entryTerms', []) if item.get('term')]
+            
+            # Vasculha todas as chaves possíveis onde a API esconde os sinônimos
+            termos_brutos = data.get('terms', []) + data.get('entryTerms', [])
+            for item in termos_brutos:
+                # Extrai o texto, seja ele de um dicionário ou de uma string simples
+                s = item.get('label') or item.get('term') if isinstance(item, dict) else item
+                
+                # Se achou um termo válido e ele for diferente do termo oficial, adiciona
+                if s and isinstance(s, str) and s.lower() != termo_oficial.lower():
+                    sinonimos_encontrados.append(s)
+            
+            # Remove sinônimos duplicados
+            sinonimos_encontrados = list(dict.fromkeys(sinonimos_encontrados))
             
         return {
             "termo_oficial": termo_oficial,
-            "sinonimos": sinonimos
+            "sinonimos": sinonimos_encontrados
         }
     except:
         return None
 
-# Função corrigida para receber as variáveis de tela
 def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
     autores_v = [a for a in autores if a.strip()]
     entrada = formatar_entrada_autor(autores_v[0]) if autores_v else "AUTOR NÃO INFORMADO"
@@ -81,7 +91,11 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
     primeira_letra_titulo = titulo_limpo[0].lower() if len(titulo_limpo) > 0 else "a"
     classificacao_cutter = f"{sobrenome_letra}{cutter_id}{primeira_letra_titulo}"
     
-    assuntos = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(dict.fromkeys(lista_assuntos))]
+    # --- FILTRO ANTI-ERROS ---
+    # Só permite que palavras de verdade entrem na ficha, ignorando None e textos vazios
+    assuntos_limpos = [a for a in lista_assuntos if isinstance(a, str) and a.strip()]
+    assuntos = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(dict.fromkeys(assuntos_limpos))]
+    
     entradas = ["I. Título."]
     romanos = ["II.", "III.", "IV.", "V."]
     for i, colab in enumerate(colaboradores):
@@ -92,24 +106,20 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
 # --- INTERFACE ---
 st.title("🩺 BiblioKhan Médicas")
 
-# DIVISÃO DE COLUNAS
 col_esq, col_dir = st.columns([1.5, 1], gap="large")
 
 with col_esq:
     st.subheader("📚 Dados da Obra")
     
-    # Linha 1: Títulos
     c_tit1, c_tit2 = st.columns(2)
     with c_tit1: titulo = st.text_input("Título da obra:")
     with c_tit2: titulo_original = st.text_input("Título original (se traduzida):")
     
-    # Linha 2: Publicação
     c_pub1, c_pub2, c_pub3 = st.columns(3)
     with c_pub1: cidade = st.text_input("Cidade:")
     with c_pub2: editora = st.text_input("Editora:")
     with c_pub3: ano = st.text_input("Ano:")
     
-    # Linha 3: Descrição Física e Classificação
     c_desc1, c_desc2, c_desc3, c_desc4 = st.columns(4)
     with c_desc1: volumes = st.text_input("Volume/Edição:")
     with c_desc2: paginas = st.text_input("Páginas:")
@@ -120,7 +130,6 @@ with col_esq:
 
     st.divider()
 
-    # Linha 4: Responsabilidade
     col_autores, col_colab = st.columns(2)
     
     with col_autores:
@@ -145,23 +154,23 @@ with col_esq:
 
     st.divider()
 
-    # --- INTEGRAÇÃO MESH ---
     st.subheader("🔍 Assuntos e Indexação (MeSH)")
     termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:")
+    
     if termo_busca:
         resultado = buscar_descritores_mesh(termo_busca)
         
         if resultado:
             st.success("Termo localizado no banco MeSH")
-            
-            # Exibição clara: Autorizado vs Sinônimos
             st.markdown(f"### 📍 Termo Autorizado: **{resultado['termo_oficial']}**")
             
             if resultado['sinonimos']:
-                with st.expander("📝 Ver sinônimos (Entry Terms)"):
+                with st.expander(f"📝 Ver sinônimos ({len(resultado['sinonimos'])} encontrados)"):
                     st.write("Estes termos referem-se ao termo autorizado acima:")
                     for s in resultado['sinonimos']:
                         st.markdown(f"- {s}")
+            else:
+                st.info("Nenhum sinônimo direto encontrado para este termo.")
             
             if st.button("➕ Adicionar como Assunto"):
                 st.session_state.lista_assuntos.append(resultado['termo_oficial'])
@@ -169,18 +178,17 @@ with col_esq:
         else:
             st.warning("Termo não encontrado ou erro na conexão.")
 
-   # Trava de segurança: Filtra apenas assuntos que sejam texto válido
-    assuntos_validos = [str(a) for a in st.session_state.lista_assuntos if a]
-    
+    # Exibição segura dos assuntos já salvos
+    assuntos_validos = [str(a) for a in st.session_state.lista_assuntos if isinstance(a, str) and a]
     st.caption("**Assuntos Selecionados:** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum ainda."))
     
     if st.button("🗑️ Limpar Assuntos"):
         st.session_state.lista_assuntos = []
         st.rerun()
+
 with col_dir:
     st.subheader("👁️ Pré-visualização")
     
-    # Chamada corrigida passando os parâmetros
     entrada, class_cutter, auts, lista_final = get_ficha_data(
         titulo, 
         st.session_state.autores, 
@@ -188,7 +196,6 @@ with col_dir:
         st.session_state.lista_assuntos
     )
 
-    # Preparando strings
     autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
     volumes_str = f"{volumes} ; " if volumes else ""
     titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
@@ -203,10 +210,8 @@ with col_dir:
              {' '.join(lista_final)}
 """
 
-    # Exibe a ficha na tela
     st.markdown(f"```text\n{ficha_texto}\n```")
 
-    # --- DOWNLOAD WORD ---
     st.write("") 
     if st.button("📥 Gerar Documento Word", use_container_width=True):
         doc = Document()
