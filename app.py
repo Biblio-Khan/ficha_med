@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import io
+import json
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -139,7 +140,7 @@ with col_esq:
                 if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
 
 with col_dir:
-    # --- NOVA DISPOSIÇÃO: CONSULTA MESH PRIMEIRO ---
+    # --- CONSULTA MESH (NO TOPO) ---
     st.subheader("🔍 Assuntos e Indexação (MeSH)")
     termo_busca = st.text_input("Buscar termo no MeSH:")
     
@@ -151,9 +152,15 @@ with col_dir:
         
         if resultados:
             opcoes_nomes = [r["termo_oficial"] for r in resultados]
-            escolha = st.selectbox("Selecione o termo mais adequado:", opcoes_nomes)
+            escolha = st.selectbox("Selecione o termo:", opcoes_nomes)
             termo_escolhido = next(r for r in resultados if r["termo_oficial"] == escolha)
-            st.markdown(f"**Termo:** {termo_escolhido['termo_oficial']}")
+            
+            st.markdown(f"**📍 Termo:** {termo_escolhido['termo_oficial']}")
+            
+            if termo_escolhido['sinonimos']:
+                with st.expander(f"📝 Ver sinônimos ({len(termo_escolhido['sinonimos'])})"):
+                    for s in termo_escolhido['sinonimos']:
+                        st.markdown(f"- {s}")
             
             c_btn1, c_btn2 = st.columns(2)
             with c_btn1:
@@ -173,7 +180,7 @@ with col_dir:
     
     st.divider()
 
-    # --- PRÉ-VISUALIZAÇÃO DEPOIS ---
+    # --- PRÉ-VISUALIZAÇÃO ---
     st.subheader("👁️ Pré-visualização")
     entrada, class_cutter, auts, lista_final = get_ficha_data(titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos)
     
@@ -183,5 +190,10 @@ with col_dir:
 
     if st.button("📥 Gerar Documento Word", use_container_width=True):
         doc = Document()
-        # ... (seu código de geração de doc permanece igual)
-        bio = io.BytesIO(); doc.save(bio); st.download_button("Baixar Ficha", data=bio.getvalue(), file_name="ficha.docx", use_container_width=True)
+        table = doc.add_table(rows=1, cols=1)
+        cell = table.cell(0, 0)
+        p = cell.add_paragraph()
+        p.add_run(ficha_texto)
+        bio = io.BytesIO()
+        doc.save(bio)
+        st.download_button("Baixar Ficha Formatada", data=bio.getvalue(), file_name="ficha_catalografica.docx", use_container_width=True)
