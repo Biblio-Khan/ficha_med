@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import io
-import json
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -14,6 +13,7 @@ st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="w
 if 'lista_assuntos' not in st.session_state: st.session_state.lista_assuntos = []
 if 'autores' not in st.session_state: st.session_state.autores = [""]
 if 'colaboradores' not in st.session_state: st.session_state.colaboradores = []
+# Novos estados para controlar a quantidade de buscas no MeSH
 if 'mesh_limite' not in st.session_state: st.session_state.mesh_limite = 5
 if 'ultimo_termo' not in st.session_state: st.session_state.ultimo_termo = ""
 
@@ -43,14 +43,17 @@ def calcular_cutter(nome_autor):
 
 @st.cache_data(ttl=3600)
 def buscar_descritores_mesh(termo, limite=5):
+    # O limite agora é dinâmico (recebe o valor da função)
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
     params = {"query": termo.strip(), "match": "contains", "limit": limite, "type": "descriptor"}
     
     try:
         resp = requests.get(url_lookup, params=params, timeout=10)
-        if resp.status_code != 200 or not resp.json(): return []
+        if resp.status_code != 200 or not resp.json():
+            return []
 
         resultados_completos = []
+        
         for item in resp.json():
             descriptor_id = item.get('resource', '').split('/')[-1]
             termo_oficial = item.get('label', termo) 
@@ -58,19 +61,25 @@ def buscar_descritores_mesh(termo, limite=5):
             url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
             resp_details = requests.get(url_details, timeout=10)
             
-            sinonimos = []
+            sinonimos_encontrados = []
             if resp_details.status_code == 200:
                 data = resp_details.json()
                 termos_brutos = data.get('terms', []) + data.get('entryTerms', [])
                 for t in termos_brutos:
                     s = t.get('label') or t.get('term') if isinstance(t, dict) else t
                     if s and isinstance(s, str) and s.lower() != termo_oficial.lower():
-                        sinonimos.append(s)
-                sinonimos = list(dict.fromkeys(sinonimos))
+                        sinonimos_encontrados.append(s)
                 
-            resultados_completos.append({"termo_oficial": termo_oficial, "sinonimos": sinonimos})
+                sinonimos_encontrados = list(dict.fromkeys(sinonimos_encontrados))
+                
+            resultados_completos.append({
+                "termo_oficial": termo_oficial,
+                "sinonimos": sinonimos_encontrados
+            })
+            
         return resultados_completos
-    except: return []
+    except:
+        return []
 
 def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
     autores_v = [a for a in autores if a.strip()]
@@ -99,6 +108,7 @@ col_esq, col_dir = st.columns([1.5, 1], gap="large")
 
 with col_esq:
     st.subheader("📚 Dados da Obra")
+    
     c_tit1, c_tit2 = st.columns(2)
     with c_tit1: titulo = st.text_input("Título da obra:")
     with c_tit2: titulo_original = st.text_input("Título original (se traduzida):")
@@ -119,6 +129,7 @@ with col_esq:
     st.divider()
 
     col_autores, col_colab = st.columns(2)
+    
     with col_autores:
         st.write("### 👥 Autores")
         if st.button("➕ Adicionar Autor", use_container_width=True): st.session_state.autores.append("")
@@ -139,61 +150,146 @@ with col_esq:
             with c3:
                 if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
 
-with col_dir:
-    # --- CONSULTA MESH (NO TOPO) ---
+    st.divider()
+
+    # --- SEÇÃO DE BUSCA ATUALIZADA (COM BOTÃO CARREGAR MAIS) ---
     st.subheader("🔍 Assuntos e Indexação (MeSH)")
-    termo_busca = st.text_input("Buscar termo no MeSH:")
+    termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:")
     
     if termo_busca:
+        # Se a pessoa digitou uma palavra nova, reseta a busca para 5 resultados
         if termo_busca != st.session_state.ultimo_termo:
             st.session_state.ultimo_termo = termo_busca
             st.session_state.mesh_limite = 5
+            
         resultados = buscar_descritores_mesh(termo_busca, st.session_state.mesh_limite)
         
         if resultados:
+            st.success(f"Mostrando até {st.session_state.mesh_limite} termos no banco MeSH.")
+            
             opcoes_nomes = [r["termo_oficial"] for r in resultados]
-            escolha = st.selectbox("Selecione o termo:", opcoes_nomes)
+            escolha = st.selectbox("Selecione o termo mais adequado:", opcoes_nomes)
+            
             termo_escolhido = next(r for r in resultados if r["termo_oficial"] == escolha)
             
-            st.markdown(f"**📍 Termo:** {termo_escolhido['termo_oficial']}")
+            st.markdown(f"### 📍 Termo Autorizado: **{termo_escolhido['termo_oficial']}**")
             
             if termo_escolhido['sinonimos']:
-                with st.expander(f"📝 Ver sinônimos ({len(termo_escolhido['sinonimos'])})"):
+                with st.expander(f"📝 Ver sinônimos ({len(termo_escolhido['sinonimos'])} encontrados)"):
+                    st.write("Estes termos referem-se ao termo selecionado:")
                     for s in termo_escolhido['sinonimos']:
                         st.markdown(f"- {s}")
+            else:
+                st.info("Nenhum sinônimo direto encontrado para este termo.")
             
-            c_btn1, c_btn2 = st.columns(2)
-            with c_btn1:
-                if st.button("➕ Adicionar", use_container_width=True):
+            # Divide os botões lado a lado
+            col_add, col_mais = st.columns(2)
+            
+            with col_add:
+                if st.button("➕ Adicionar como Assunto", use_container_width=True):
                     st.session_state.lista_assuntos.append(termo_escolhido['termo_oficial'])
                     st.rerun()
-            with c_btn2:
+            
+            with col_mais:
+                # O botão de carregar mais só aparece se a API trouxer a quantidade máxima solicitada 
+                # (sinal de que podem haver ainda mais resultados escondidos)
                 if len(resultados) == st.session_state.mesh_limite:
-                    if st.button("🔄 Mais", use_container_width=True):
-                        st.session_state.mesh_limite += 5
+                    if st.button("🔄 Buscar mais resultados", use_container_width=True):
+                        st.session_state.mesh_limite += 5 # Puxa mais 5 da próxima vez
                         st.rerun()
-        else: st.warning("Termo não encontrado.")
+        else:
+            st.warning("Termo não encontrado ou erro na conexão.")
 
     assuntos_validos = [str(a) for a in st.session_state.lista_assuntos if isinstance(a, str) and a]
-    st.caption("**Assuntos:** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum."))
-    if st.button("🗑️ Limpar Assuntos"): st.session_state.lista_assuntos = []; st.rerun()
+    st.caption("**Assuntos Selecionados:** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum ainda."))
     
-    st.divider()
+    if st.button("🗑️ Limpar Assuntos"):
+        st.session_state.lista_assuntos = []
+        st.rerun()
 
-    # --- PRÉ-VISUALIZAÇÃO ---
+with col_dir:
     st.subheader("👁️ Pré-visualização")
-    entrada, class_cutter, auts, lista_final = get_ficha_data(titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos)
     
-    autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.')
-    ficha_texto = f"{classe_principal}\n{class_cutter}       {entrada}.\n             {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.\n             {volumes} {paginas}. {colecao_serie}\n             ISBN {isbn}\n\n             {' '.join(lista_final)}"
+    entrada, class_cutter, auts, lista_final = get_ficha_data(
+        titulo, 
+        st.session_state.autores, 
+        st.session_state.colaboradores, 
+        st.session_state.lista_assuntos
+    )
+
+    autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
+    volumes_str = f"{volumes} ; " if volumes else ""
+    titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
+    colecao_str = f" ({colecao_serie})" if colecao_serie else ""
+
+    ficha_texto = f"""{classe_principal}
+{class_cutter}       {entrada}.
+             {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
+             {volumes_str}{paginas}.{colecao_str}{titulo_original_str}
+             ISBN {isbn if isbn else "..."}
+
+             {' '.join(lista_final)}
+"""
+
     st.markdown(f"```text\n{ficha_texto}\n```")
 
+    st.write("") 
     if st.button("📥 Gerar Documento Word", use_container_width=True):
         doc = Document()
+        
         table = doc.add_table(rows=1, cols=1)
+        table.style = 'Table Grid'
+        table.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
         cell = table.cell(0, 0)
-        p = cell.add_paragraph()
-        p.add_run(ficha_texto)
+        table.columns[0].width = Inches(5.3)
+        cell.width = Inches(5.3)
+        
+        p0 = cell.paragraphs[0]
+        p0.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p0.paragraph_format.space_after = Pt(0)
+        p0.paragraph_format.line_spacing = 1.15
+        
+        r0 = p0.add_run(classe_principal)
+        r0.font.name = 'Arial'
+        r0.font.size = Pt(10)
+        r0.bold = True
+        
+        p1 = cell.add_paragraph()
+        p1.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p1.paragraph_format.space_after = Pt(0)
+        p1.paragraph_format.line_spacing = 1.15
+        p1.paragraph_format.tab_stops.add_tab_stop(Inches(0.7)) 
+        
+        r1_cutter = p1.add_run(class_cutter)
+        r1_cutter.font.name = 'Arial'
+        r1_cutter.font.size = Pt(10)
+        r1_cutter.bold = True
+        
+        p1.add_run("\t") 
+        
+        r1_ent = p1.add_run(f"{entrada}.")
+        r1_ent.font.name = 'Arial'
+        r1_ent.font.size = Pt(10)
+        
+        p2 = cell.add_paragraph()
+        p2.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p2.paragraph_format.space_after = Pt(0)
+        p2.paragraph_format.line_spacing = 1.15
+        p2.paragraph_format.left_indent = Inches(0.7) 
+        
+        corpo_linhas = [
+            f"{titulo} / {autores_str}. – {cidade} : {editora}, {ano}.",
+            f"{volumes_str}{paginas}.{colecao_str}{titulo_original_str.strip()}",
+            f"ISBN {isbn if isbn else '...'}",
+            "",
+            ' '.join(lista_final)
+        ]
+        
+        r2 = p2.add_run("\n".join(corpo_linhas))
+        r2.font.name = 'Arial'
+        r2.font.size = Pt(10)
+                
         bio = io.BytesIO()
         doc.save(bio)
         st.download_button("Baixar Ficha Formatada", data=bio.getvalue(), file_name="ficha_catalografica.docx", use_container_width=True)
