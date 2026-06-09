@@ -13,6 +13,9 @@ st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="w
 if 'lista_assuntos' not in st.session_state: st.session_state.lista_assuntos = []
 if 'autores' not in st.session_state: st.session_state.autores = [""]
 if 'colaboradores' not in st.session_state: st.session_state.colaboradores = []
+# Novos estados para controlar a quantidade de buscas no MeSH
+if 'mesh_limite' not in st.session_state: st.session_state.mesh_limite = 5
+if 'ultimo_termo' not in st.session_state: st.session_state.ultimo_termo = ""
 
 # --- FUNÇÕES ---
 def formatar_entrada_autor(nome):
@@ -39,10 +42,10 @@ def calcular_cutter(nome_autor):
     except: return "????"
 
 @st.cache_data(ttl=3600)
-def buscar_descritores_mesh(termo):
-    # 1. Busca inicial: Agora com limite de 5 resultados
+def buscar_descritores_mesh(termo, limite=5):
+    # O limite agora é dinâmico (recebe o valor da função)
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    params = {"query": termo.strip(), "match": "contains", "limit": 5, "type": "descriptor"}
+    params = {"query": termo.strip(), "match": "contains", "limit": limite, "type": "descriptor"}
     
     try:
         resp = requests.get(url_lookup, params=params, timeout=10)
@@ -51,7 +54,6 @@ def buscar_descritores_mesh(termo):
 
         resultados_completos = []
         
-        # 2. Para cada resultado encontrado, buscamos os sinônimos
         for item in resp.json():
             descriptor_id = item.get('resource', '').split('/')[-1]
             termo_oficial = item.get('label', termo) 
@@ -150,21 +152,24 @@ with col_esq:
 
     st.divider()
 
-    # --- SEÇÃO DE BUSCA ATUALIZADA ---
+    # --- SEÇÃO DE BUSCA ATUALIZADA (COM BOTÃO CARREGAR MAIS) ---
     st.subheader("🔍 Assuntos e Indexação (MeSH)")
     termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:")
     
     if termo_busca:
-        resultados = buscar_descritores_mesh(termo_busca)
+        # Se a pessoa digitou uma palavra nova, reseta a busca para 5 resultados
+        if termo_busca != st.session_state.ultimo_termo:
+            st.session_state.ultimo_termo = termo_busca
+            st.session_state.mesh_limite = 5
+            
+        resultados = buscar_descritores_mesh(termo_busca, st.session_state.mesh_limite)
         
         if resultados:
-            st.success(f"Encontramos {len(resultados)} termo(s) no banco MeSH.")
+            st.success(f"Mostrando até {st.session_state.mesh_limite} termos no banco MeSH.")
             
-            # Cria a lista de opções para o usuário escolher
             opcoes_nomes = [r["termo_oficial"] for r in resultados]
             escolha = st.selectbox("Selecione o termo mais adequado:", opcoes_nomes)
             
-            # Localiza os dados do termo que o usuário escolheu no selectbox
             termo_escolhido = next(r for r in resultados if r["termo_oficial"] == escolha)
             
             st.markdown(f"### 📍 Termo Autorizado: **{termo_escolhido['termo_oficial']}**")
@@ -177,9 +182,21 @@ with col_esq:
             else:
                 st.info("Nenhum sinônimo direto encontrado para este termo.")
             
-            if st.button("➕ Adicionar como Assunto"):
-                st.session_state.lista_assuntos.append(termo_escolhido['termo_oficial'])
-                st.rerun()
+            # Divide os botões lado a lado
+            col_add, col_mais = st.columns(2)
+            
+            with col_add:
+                if st.button("➕ Adicionar como Assunto", use_container_width=True):
+                    st.session_state.lista_assuntos.append(termo_escolhido['termo_oficial'])
+                    st.rerun()
+            
+            with col_mais:
+                # O botão de carregar mais só aparece se a API trouxer a quantidade máxima solicitada 
+                # (sinal de que podem haver ainda mais resultados escondidos)
+                if len(resultados) == st.session_state.mesh_limite:
+                    if st.button("🔄 Buscar mais resultados", use_container_width=True):
+                        st.session_state.mesh_limite += 5 # Puxa mais 5 da próxima vez
+                        st.rerun()
         else:
             st.warning("Termo não encontrado ou erro na conexão.")
 
