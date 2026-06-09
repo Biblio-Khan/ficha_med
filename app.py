@@ -3,7 +3,6 @@ import pandas as pd
 import requests
 import io
 import os
-import base64
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -316,38 +315,30 @@ with tab_principal:
             doc.save(bio)
             st.download_button("📥 Baixar Fichas em Lote (.docx)", data=bio.getvalue(), file_name="lote_fichas_catalograficas.docx", use_container_width=True)
 
-# --- ABA DE CONSULTA INDEPENDENTE (LEITURA DE PDF CORRIGIDA PARA CHROME) ---
+# --- ABA DE CONSULTA INDEPENDENTE (LEITURA NATIVA ATRAVÉS DE PASTA STATIC) ---
 with tab_cdd:
     st.subheader("📖 Documento Guia de Consulta")
-    st.write("Consulte o PDF completo da classificação diretamente aqui dentro do sistema.")
+    st.write("Consulte o documento completo da classificação diretamente aqui dentro do sistema.")
     
-    pdf_nome_arquivo = "cdd_medica.pdf"
+    # Caminho esperado pelo script dentro da nova pasta static
+    pdf_caminho_local = os.path.join("static", "cdd_medica.pdf")
     
-    if os.path.exists(pdf_nome_arquivo):
-        try:
-            with open(pdf_nome_arquivo, "rb") as f:
-                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-            
-            # Mudança crucial: Usamos <object> e <embed> em vez de <iframe> para burlar a restrição do Chrome
-            pdf_display = f"""
-            <object data="data:application/pdf;base64,{base64_pdf}" type="application/pdf" width="100%" height="900px">
-                <embed src="data:application/pdf;base64,{base64_pdf}" type="application/pdf" width="100%" height="900px"/>
-            </object>
-            """
-            
-            # Renderização segura
-            st.markdown(pdf_display, unsafe_allow_html=True)
-            
-        except Exception as e:
-            st.error(f"Erro ao carregar e processar o arquivo PDF: {e}")
-    else:
-        st.info("💡 **Como ativar o visualizador de consulta:**")
-        st.markdown(f"""
-        Para visualizar o seu documento aqui dentro, faça o seguinte:
-        1. Pegue o seu arquivo Word/PDF de classificação.
-        2. Certifique-se de salvá-lo com o formato **.pdf**.
-        3. Nomeie o arquivo exatamente como: `{pdf_nome_arquivo}`
-        4. Coloque-o **na mesma pasta** onde está este script do Python (`app.py`).
+    if os.path.exists(pdf_caminho_local):
+        # Com o 'enableStaticServing' ativado, a rota interna '/static/...' fica pública para o app
+        pdf_url = "/static/cdd_medica.pdf"
         
-        Assim que você colocar o arquivo lá, ele carregará automaticamente nesta tela com todas as barras de rolagem e zoom!
+        # Um iframe simples apontando para a URL interna. O Chrome carrega nativamente sem bloqueios.
+        pdf_display = f'<iframe src="{pdf_url}" width="100%" height="900px" style="border: 1px solid #ccc; border-radius: 5px;"></iframe>'
+        
+        st.markdown(pdf_display, unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ **Arquivo não localizado!**")
+        st.markdown("""
+        Para que o visualizador funcione perfeitamente no Google Chrome, siga estas instruções:
+        
+        1. Na pasta principal do seu projeto, crie uma pasta chamada **`static`**.
+        2. Mova o seu arquivo PDF para dentro dela e salve com o nome exato: **`cdd_medica.pdf`**.
+        3. Certifique-se de que criou o arquivo **`.streamlit/config.toml`** ativando o recurso, conforme as instruções fornecidas.
+        
+        Após mover o arquivo para a pasta correta, atualize a página do seu navegador!
         """)
