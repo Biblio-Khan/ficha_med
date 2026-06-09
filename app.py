@@ -40,7 +40,7 @@ def calcular_cutter(nome_autor):
 
 @st.cache_data(ttl=3600)
 def buscar_descritores_mesh(termo):
-    # 1. Busca inicial para pegar o ID do descritor
+    # 1. Busca inicial para pegar o ID e o Termo Oficial
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
     params = {"query": termo.strip(), "match": "contains", "limit": 1, "type": "descriptor"}
     
@@ -49,20 +49,24 @@ def buscar_descritores_mesh(termo):
         if resp.status_code != 200 or not resp.json():
             return None
 
-        descriptor_id = resp.json()[0].get('resource', '').split('/')[-1]
+        # Pegamos o ID e o Label diretamente do primeiro resultado (mais seguro)
+        primeiro_resultado = resp.json()[0]
+        descriptor_id = primeiro_resultado.get('resource', '').split('/')[-1]
+        termo_oficial = primeiro_resultado.get('label', termo) 
 
-        # 2. Busca de detalhes para pegar o termo oficial e os sinônimos
+        # 2. Busca de detalhes APENAS para pegar os sinônimos
         url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
         resp_details = requests.get(url_details, timeout=10)
         
+        sinonimos = []
         if resp_details.status_code == 200:
             data = resp_details.json()
-            # Retorna um dicionário com o termo oficial e os sinônimos
-            return {
-                "termo_oficial": data.get('label'),
-                "sinonimos": [item.get('term') for item in data.get('entryTerms', [])]
-            }
-        return None
+            sinonimos = [item.get('term') for item in data.get('entryTerms', []) if item.get('term')]
+            
+        return {
+            "termo_oficial": termo_oficial,
+            "sinonimos": sinonimos
+        }
     except:
         return None
 
@@ -165,12 +169,14 @@ with col_esq:
         else:
             st.warning("Termo não encontrado ou erro na conexão.")
 
-    st.caption("**Assuntos Selecionados:** " + (", ".join(list(dict.fromkeys(st.session_state.lista_assuntos))) if st.session_state.lista_assuntos else "Nenhum ainda."))
+   # Trava de segurança: Filtra apenas assuntos que sejam texto válido
+    assuntos_validos = [str(a) for a in st.session_state.lista_assuntos if a]
+    
+    st.caption("**Assuntos Selecionados:** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum ainda."))
     
     if st.button("🗑️ Limpar Assuntos"):
         st.session_state.lista_assuntos = []
         st.rerun()
-
 with col_dir:
     st.subheader("👁️ Pré-visualização")
     
