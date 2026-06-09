@@ -40,46 +40,44 @@ def calcular_cutter(nome_autor):
 
 @st.cache_data(ttl=3600)
 def buscar_descritores_mesh(termo):
-    # 1. Busca inicial para pegar o ID e o Termo Oficial
+    # 1. Busca inicial: Agora com limite de 5 resultados
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    params = {"query": termo.strip(), "match": "contains", "limit": 1, "type": "descriptor"}
+    params = {"query": termo.strip(), "match": "contains", "limit": 5, "type": "descriptor"}
     
     try:
         resp = requests.get(url_lookup, params=params, timeout=10)
         if resp.status_code != 200 or not resp.json():
-            return None
+            return []
 
-        primeiro_resultado = resp.json()[0]
-        descriptor_id = primeiro_resultado.get('resource', '').split('/')[-1]
-        termo_oficial = primeiro_resultado.get('label', termo) 
-
-        # 2. Busca de detalhes para resgatar os sinônimos
-        url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
-        resp_details = requests.get(url_details, timeout=10)
+        resultados_completos = []
         
-        sinonimos_encontrados = []
-        if resp_details.status_code == 200:
-            data = resp_details.json()
+        # 2. Para cada resultado encontrado, buscamos os sinônimos
+        for item in resp.json():
+            descriptor_id = item.get('resource', '').split('/')[-1]
+            termo_oficial = item.get('label', termo) 
+
+            url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
+            resp_details = requests.get(url_details, timeout=10)
             
-            # Vasculha todas as chaves possíveis onde a API esconde os sinônimos
-            termos_brutos = data.get('terms', []) + data.get('entryTerms', [])
-            for item in termos_brutos:
-                # Extrai o texto, seja ele de um dicionário ou de uma string simples
-                s = item.get('label') or item.get('term') if isinstance(item, dict) else item
+            sinonimos_encontrados = []
+            if resp_details.status_code == 200:
+                data = resp_details.json()
+                termos_brutos = data.get('terms', []) + data.get('entryTerms', [])
+                for t in termos_brutos:
+                    s = t.get('label') or t.get('term') if isinstance(t, dict) else t
+                    if s and isinstance(s, str) and s.lower() != termo_oficial.lower():
+                        sinonimos_encontrados.append(s)
                 
-                # Se achou um termo válido e ele for diferente do termo oficial, adiciona
-                if s and isinstance(s, str) and s.lower() != termo_oficial.lower():
-                    sinonimos_encontrados.append(s)
+                sinonimos_encontrados = list(dict.fromkeys(sinonimos_encontrados))
+                
+            resultados_completos.append({
+                "termo_oficial": termo_oficial,
+                "sinonimos": sinonimos_encontrados
+            })
             
-            # Remove sinônimos duplicados
-            sinonimos_encontrados = list(dict.fromkeys(sinonimos_encontrados))
-            
-        return {
-            "termo_oficial": termo_oficial,
-            "sinonimos": sinonimos_encontrados
-        }
+        return resultados_completos
     except:
-        return None
+        return []
 
 def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
     autores_v = [a for a in autores if a.strip()]
@@ -91,8 +89,6 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
     primeira_letra_titulo = titulo_limpo[0].lower() if len(titulo_limpo) > 0 else "a"
     classificacao_cutter = f"{sobrenome_letra}{cutter_id}{primeira_letra_titulo}"
     
-    # --- FILTRO ANTI-ERROS ---
-    # Só permite que palavras de verdade entrem na ficha, ignorando None e textos vazios
     assuntos_limpos = [a for a in lista_assuntos if isinstance(a, str) and a.strip()]
     assuntos = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(dict.fromkeys(assuntos_limpos))]
     
@@ -154,31 +150,39 @@ with col_esq:
 
     st.divider()
 
+    # --- SEÇÃO DE BUSCA ATUALIZADA ---
     st.subheader("🔍 Assuntos e Indexação (MeSH)")
     termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:")
     
     if termo_busca:
-        resultado = buscar_descritores_mesh(termo_busca)
+        resultados = buscar_descritores_mesh(termo_busca)
         
-        if resultado:
-            st.success("Termo localizado no banco MeSH")
-            st.markdown(f"### 📍 Termo Autorizado: **{resultado['termo_oficial']}**")
+        if resultados:
+            st.success(f"Encontramos {len(resultados)} termo(s) no banco MeSH.")
             
-            if resultado['sinonimos']:
-                with st.expander(f"📝 Ver sinônimos ({len(resultado['sinonimos'])} encontrados)"):
-                    st.write("Estes termos referem-se ao termo autorizado acima:")
-                    for s in resultado['sinonimos']:
+            # Cria a lista de opções para o usuário escolher
+            opcoes_nomes = [r["termo_oficial"] for r in resultados]
+            escolha = st.selectbox("Selecione o termo mais adequado:", opcoes_nomes)
+            
+            # Localiza os dados do termo que o usuário escolheu no selectbox
+            termo_escolhido = next(r for r in resultados if r["termo_oficial"] == escolha)
+            
+            st.markdown(f"### 📍 Termo Autorizado: **{termo_escolhido['termo_oficial']}**")
+            
+            if termo_escolhido['sinonimos']:
+                with st.expander(f"📝 Ver sinônimos ({len(termo_escolhido['sinonimos'])} encontrados)"):
+                    st.write("Estes termos referem-se ao termo selecionado:")
+                    for s in termo_escolhido['sinonimos']:
                         st.markdown(f"- {s}")
             else:
                 st.info("Nenhum sinônimo direto encontrado para este termo.")
             
             if st.button("➕ Adicionar como Assunto"):
-                st.session_state.lista_assuntos.append(resultado['termo_oficial'])
+                st.session_state.lista_assuntos.append(termo_escolhido['termo_oficial'])
                 st.rerun()
         else:
             st.warning("Termo não encontrado ou erro na conexão.")
 
-    # Exibição segura dos assuntos já salvos
     assuntos_validos = [str(a) for a in st.session_state.lista_assuntos if isinstance(a, str) and a]
     st.caption("**Assuntos Selecionados:** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum ainda."))
     
