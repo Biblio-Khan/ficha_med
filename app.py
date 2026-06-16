@@ -19,6 +19,13 @@ if 'ultimo_termo' not in st.session_state: st.session_state.ultimo_termo = ""
 if 'fichas_lote' not in st.session_state: st.session_state.fichas_lote = []
 
 # --- FUNÇÕES ---
+def traduzir_para_portugues(texto):
+    """Traduz o termo do MeSH (inglês) para o português de forma automática."""
+    try:
+        return GoogleTranslator(source='en', target='pt').translate(texto)
+    except:
+        return texto  # Caso ocorra falha de conexão, mantém o termo original
+
 def formatar_entrada_autor(nome):
     partes = nome.strip().split()
     return f"{partes[-1].upper()}, {' '.join(partes[:-1])}" if len(partes) > 1 else nome.upper()
@@ -168,7 +175,7 @@ with col_dir:
             escolha = st.selectbox("Selecione o termo mais adequado:", opcoes_nomes)
             termo_escolhido = next(r for r in resultados if r["termo_oficial"] == escolha)
             
-            st.markdown(f"### 📍 Termo Autorizado: **{termo_escolhido['termo_oficial']}**")
+            st.markdown(f"### 📍 Termo Autorizado (En): **{termo_escolhido['termo_oficial']}**")
             
             if termo_escolhido['sinonimos']:
                 with st.expander(f"📝 Ver sinônimos ({len(termo_escolhido['sinonimos'])} encontrados)"):
@@ -181,7 +188,9 @@ with col_dir:
             col_add, col_mais = st.columns(2)
             with col_add:
                 if st.button("➕ Adicionar como Assunto", use_container_width=True):
-                    st.session_state.lista_assuntos.append(termo_escolhido['termo_oficial'])
+                    # Traduz o termo selecionado antes de incluí-lo na lista oficial
+                    termo_em_portugues = traduzir_para_portugues(termo_escolhido['termo_oficial'])
+                    st.session_state.lista_assuntos.append(termo_em_portugues)
                     st.rerun()
             with col_mais:
                 if len(resultados) == st.session_state.mesh_limite:
@@ -192,7 +201,7 @@ with col_dir:
             st.warning("Termo não encontrado ou erro na conexão.")
 
     assuntos_validos = [str(a) for a in st.session_state.lista_assuntos if isinstance(a, str) and a]
-    st.caption("**Assuntos Selecionados:** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum ainda."))
+    st.caption("**Assuntos Selecionados (Traduzidos):** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum ainda."))
     
     if st.button("🗑️ Limpar Assuntos"):
         st.session_state.lista_assuntos = []
