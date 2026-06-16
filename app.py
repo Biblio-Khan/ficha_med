@@ -125,11 +125,15 @@ with col_esq:
     with c_pub2: editora = st.text_input("Editora:")
     with c_pub3: ano = st.text_input("Ano:")
     
-    c_desc1, c_desc2, c_desc3, c_desc4 = st.columns(4)
+    c_desc1, c_desc2, c_desc3 = st.columns(3)
     with c_desc1: volumes = st.text_input("Volume/Edição:")
     with c_desc2: paginas = st.text_input("Páginas:")
     with c_desc3: isbn = st.text_input("ISBN:")
-    with c_desc4: classe_principal = st.text_input("Classe Principal (Ex: 610):")
+    
+    # --- BLOCO DE CLASSIFICAÇÃO SISTÊMICA ---
+    c_class1, c_class2 = st.columns(2)
+    with c_class1: classe_principal = st.text_input("Classe Principal DDC/CDU (Ex: 610):")
+    with c_class2: classe_nlm = st.text_input("Classificação NLM (Ex: WG 140):")
 
     colecao_serie = st.text_input("Coleção ou Série (Opcional):")
 
@@ -158,7 +162,7 @@ with col_esq:
                 if st.button("❌", key=f"del_colab_{i}"): st.session_state.colaboradores.pop(i); st.rerun()
 
 with col_dir:
-    # --- SEÇÃO DE BUSCA MESH (NO TOPO) ---
+    # --- SEÇÃO DE BUSCA MESH ---
     st.subheader("🔍 Assuntos e Indexação (MeSH)")
     termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:")
     
@@ -185,7 +189,6 @@ with col_dir:
             else:
                 st.info("Nenhum sinônimo direto encontrado para este termo.")
             
-            # --- NOVA SELECTBOX DE QUALIFICADORES (SUBHEADINGS) ---
             qualificadores_comuns = [
                 "Nenhum", "anatomia & histologia", "cirurgia", "citologia", "diagnóstico", 
                 "dietoterapia", "efeitos adversos", "enfermagem", "enzimologia", "epidemiologia", 
@@ -199,14 +202,10 @@ with col_dir:
             col_add, col_mais = st.columns(2)
             with col_add:
                 if st.button("➕ Adicionar como Assunto", use_container_width=True):
-                    # Traduz e formata o termo selecionado
                     termo_em_portugues = traduzir_para_portugues(termo_escolhido['termo_oficial']).capitalize()
-                    
-                    # Se escolheu um qualificador específico, anexa ao termo
                     if qualificador_escolhido != "Nenhum":
                         termo_em_portugues = f"{termo_em_portugues} / {qualificador_escolhido}"
                         
-                    # Evita duplicados na lista ativa
                     if termo_em_portugues not in st.session_state.lista_assuntos:
                         st.session_state.lista_assuntos.append(termo_em_portugues)
                     st.rerun()
@@ -222,11 +221,9 @@ with col_dir:
     if not st.session_state.lista_assuntos:
         st.caption("Nenhum assunto selecionado ainda.")
     else:
-        # Apresentação individual com opção de exclusão por item
         for i, assunto in enumerate(st.session_state.lista_assuntos):
             c_assunto, c_del_assunto = st.columns([8, 2])
-            with c_assunto:
-                st.markdown(f"• {assunto}")
+            with c_assunto: st.markdown(f"• {assunto}")
             with c_del_assunto:
                 if st.button("❌", key=f"del_assunto_{i}", help="Remover este assunto"):
                     st.session_state.lista_assuntos.pop(i)
@@ -254,8 +251,15 @@ with col_dir:
     titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
     colecao_str = f" ({colecao_serie})" if colecao_serie else ""
 
-    ficha_texto = f"""{classe_principal}
-{class_cutter}       {entrada}.
+    # Formatação condicional para empilhar NLM e DDC se ambos existirem
+    bloco_classificacao = []
+    if classe_nlm.strip(): bloco_classificacao.append(classe_nlm.strip())
+    if classe_principal.strip(): bloco_classificacao.append(classe_principal.strip())
+    
+    linhas_class_str = "\n".join(bloco_classificacao)
+    bloco_esquerdo_top = f"{linhas_class_str}\n{class_cutter}" if linhas_class_str else class_cutter
+
+    ficha_texto = f"""{bloco_esquerdo_top}       {entrada}.
              {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
              {volumes_str}{paginas}.{colecao_str}{titulo_original_str}
              ISBN {isbn if isbn else "..."}
@@ -272,10 +276,10 @@ with col_dir:
     with col_lote_add:
         if st.button("➕ Adicionar ao Lote", use_container_width=True):
             st.session_state.fichas_lote.append({
-                "classe_principal": classe_principal, "class_cutter": class_cutter, "entrada": entrada,
-                "titulo": titulo, "autores_str": autores_str, "cidade": cidade, "editora": editora, "ano": ano,
-                "volumes_str": volumes_str, "paginas": paginas, "colecao_str": colecao_str,
-                "titulo_original_str": titulo_original_str, "isbn": isbn, "lista_final": lista_final
+                "classe_nlm": classe_nlm.strip(), "classe_principal": classe_principal.strip(), 
+                "class_cutter": class_cutter, "entrada": entrada, "titulo": titulo, "autores_str": autores_str, 
+                "cidade": cidade, "editora": editora, "ano": ano, "volumes_str": volumes_str, "paginas": paginas, 
+                "colecao_str": colecao_str, "titulo_original_str": titulo_original_str, "isbn": isbn, "lista_final": lista_final
             })
             st.success(f"Ficha salva! Total no lote: {len(st.session_state.fichas_lote)}")
 
@@ -285,7 +289,7 @@ with col_dir:
             st.warning("O lote foi reiniciado e esvaziado.")
             st.rerun()
 
-    # Botão de download condicional ao lote ter itens
+    # Geração do arquivo Word (.docx) estruturado para o lote
     if st.session_state.fichas_lote:
         st.write(f"📦 **Status do Lote:** {len(st.session_state.fichas_lote)} ficha(s) salva(s).")
         
@@ -299,38 +303,46 @@ with col_dir:
             table.columns[0].width = Inches(5.3)
             cell.width = Inches(5.3)
             
-            p0 = cell.paragraphs[0]
-            p0.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            p0.paragraph_format.space_after = Pt(0)
-            p0.paragraph_format.line_spacing = 1.15
+            p_topo = cell.paragraphs[0]
+            p_topo.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p_topo.paragraph_format.space_after = Pt(0)
+            p_topo.paragraph_format.line_spacing = 1.15
             
-            r0 = p0.add_run(f["classe_principal"])
-            r0.font.name = 'Arial'
-            r0.font.size = Pt(10)
-            r0.bold = True
+            # Adiciona as linhas superiores de classificação (NLM e DDC) se existirem
+            classes_linhas = []
+            if f["classe_nlm"]: classes_linhas.append(f["classe_nlm"])
+            if f["classe_principal"]: classes_linhas.append(f["classe_principal"])
             
-            p1 = cell.add_paragraph()
-            p1.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            p1.paragraph_format.space_after = Pt(0)
-            p1.paragraph_format.line_spacing = 1.15
-            p1.paragraph_format.tab_stops.add_tab_stop(Inches(0.7)) 
+            if classes_linhas:
+                r_classes = p_topo.add_run("\n".join(classes_linhas))
+                r_classes.font.name = 'Arial'
+                r_classes.font.size = Pt(10)
+                r_classes.bold = True
+                p_cutter_entrada = doc.add_paragraph() if False else cell.add_paragraph()
+            else:
+                p_cutter_entrada = p_topo
+                
+            p_cutter_entrada.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p_cutter_entrada.paragraph_format.space_after = Pt(0)
+            p_cutter_entrada.paragraph_format.line_spacing = 1.15
+            p_cutter_entrada.paragraph_format.tab_stops.add_tab_stop(Inches(0.7)) 
             
-            r1_cutter = p1.add_run(f["class_cutter"])
-            r1_cutter.font.name = 'Arial'
-            r1_cutter.font.size = Pt(10)
-            r1_cutter.bold = True
+            r_cutter = p_cutter_entrada.add_run(f["class_cutter"])
+            r_cutter.font.name = 'Arial'
+            r_cutter.font.size = Pt(10)
+            r_cutter.bold = True
             
-            p1.add_run("\t") 
+            p_cutter_entrada.add_run("\t") 
             
-            r1_ent = p1.add_run(f"{f['entrada']}.")
-            r1_ent.font.name = 'Arial'
-            r1_ent.font.size = Pt(10)
+            r_ent = p_cutter_entrada.add_run(f"{f['entrada']}.")
+            r_ent.font.name = 'Arial'
+            r_ent.font.size = Pt(10)
             
-            p2 = cell.add_paragraph()
-            p2.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            p2.paragraph_format.space_after = Pt(0)
-            p2.paragraph_format.line_spacing = 1.15
-            p2.paragraph_format.left_indent = Inches(0.7) 
+            p_corpo = cell.add_paragraph()
+            p_corpo.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            p_corpo.paragraph_format.space_after = Pt(0)
+            p_corpo.paragraph_format.line_spacing = 1.15
+            p_corpo.paragraph_format.left_indent = Inches(0.7) 
             
             corpo_linhas = [
                 f"{f['titulo']} / {f['autores_str']}. – {f['cidade']} : {f['editora']}, {f['ano']}.",
@@ -340,9 +352,9 @@ with col_dir:
                 ' '.join(f['lista_final'])
             ]
             
-            r2 = p2.add_run("\n".join(corpo_linhas))
-            r2.font.name = 'Arial'
-            r2.font.size = Pt(10)
+            r_corpo = p_corpo.add_run("\n".join(corpo_linhas))
+            r_corpo.font.name = 'Arial'
+            r_corpo.font.size = Pt(10)
             
             if idx < len(st.session_state.fichas_lote) - 1:
                 doc.add_page_break()
