@@ -4,6 +4,7 @@ import requests
 import io
 from docx import Document
 from docx.shared import Pt, Inches
+from deep_translator import GoogleTranslator
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # --- CONFIGURAÇÕES ---
