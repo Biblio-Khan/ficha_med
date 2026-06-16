@@ -52,10 +52,17 @@ def calcular_cutter(nome_autor):
 @st.cache_data(ttl=3600)
 def buscar_descritores_mesh(termo, limite=5):
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    params = {"query": termo.strip(), "match": "contains", "limit": limite, "type": "descriptor"}
+    
+    # CORREÇÃO 1: Mudado de 'query' para 'label' que é o padrão do MeSH
+    params = {"label": termo.strip(), "match": "contains", "limit": limite}
+    
+    # CORREÇÃO 2: Adicionado User-Agent para a API da NLM não bloquear o Python
+    headers = {
+        "User-Agent": "BiblioKhanMedicas/1.0 (Contato:bibliokhan@gmail.com)"
+    }
     
     try:
-        resp = requests.get(url_lookup, params=params, timeout=10)
+        resp = requests.get(url_lookup, params=params, headers=headers, timeout=10)
         if resp.status_code != 200 or not resp.json():
             return []
 
@@ -66,7 +73,7 @@ def buscar_descritores_mesh(termo, limite=5):
             termo_oficial = item.get('label', termo) 
 
             url_details = f"https://id.nlm.nih.gov/mesh/lookup/details?descriptor={descriptor_id}"
-            resp_details = requests.get(url_details, timeout=10)
+            resp_details = requests.get(url_details, headers=headers, timeout=10)
             
             sinonimos_encontrados = []
             if resp_details.status_code == 200:
@@ -85,7 +92,9 @@ def buscar_descritores_mesh(termo, limite=5):
             })
             
         return resultados_completos
-    except:
+    except Exception as e:
+        # Se quiser ver o erro exato no terminal do Streamlit descomente a linha abaixo:
+        # print(f"Erro de conexão MeSH: {e}")
         return []
 
 def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
