@@ -24,7 +24,7 @@ def traduzir_para_portugues(texto):
     try:
         return GoogleTranslator(source='en', target='pt').translate(texto)
     except:
-        return texto  # Caso ocorra falha de conexão, mantém o termo original
+        return texto
 
 def formatar_entrada_autor(nome):
     partes = nome.strip().split()
@@ -52,14 +52,8 @@ def calcular_cutter(nome_autor):
 @st.cache_data(ttl=3600)
 def buscar_descritores_mesh(termo, limite=5):
     url_lookup = "https://id.nlm.nih.gov/mesh/lookup/descriptor"
-    
-    # CORREÇÃO 1: Mudado de 'query' para 'label' que é o padrão do MeSH
     params = {"label": termo.strip(), "match": "contains", "limit": limite}
-    
-    # CORREÇÃO 2: Adicionado User-Agent para a API da NLM não bloquear o Python
-    headers = {
-        "User-Agent": "BiblioKhanMedicas/1.0 (Contato:bibliokhan@gmail.com)"
-    }
+    headers = {"User-Agent": "BiblioKhanMedicas/1.0 (Contato: seu-email@exemplo.com)"}
     
     try:
         resp = requests.get(url_lookup, params=params, headers=headers, timeout=10)
@@ -67,7 +61,6 @@ def buscar_descritores_mesh(termo, limite=5):
             return []
 
         resultados_completos = []
-        
         for item in resp.json():
             descriptor_id = item.get('resource', '').split('/')[-1]
             termo_oficial = item.get('label', termo) 
@@ -83,21 +76,17 @@ def buscar_descritores_mesh(termo, limite=5):
                     s = t.get('label') or t.get('term') if isinstance(t, dict) else t
                     if s and isinstance(s, str) and s.lower() != termo_oficial.lower():
                         sinonimos_encontrados.append(s)
-                
                 sinonimos_encontrados = list(dict.fromkeys(sinonimos_encontrados))
                 
             resultados_completos.append({
                 "termo_oficial": termo_oficial,
                 "sinonimos": sinonimos_encontrados
             })
-            
         return resultados_completos
-    except Exception as e:
-        # Se quiser ver o erro exato no terminal do Streamlit descomente a linha abaixo:
-        # print(f"Erro de conexão MeSH: {e}")
+    except:
         return []
 
-def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
+def get_ficha_data(titulo, autores, colaboradores, lista_assuntos, orientador="", coorientador=""):
     autores_v = [a for a in autores if a.strip()]
     entrada = formatar_entrada_autor(autores_v[0]) if autores_v else "AUTOR NÃO INFORMADO"
     sobrenome_letra = autores_v[0].split()[-1][0].upper() if autores_v else "A"
@@ -110,10 +99,25 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos):
     assuntos_limpos = [a for a in lista_assuntos if isinstance(a, str) and a.strip()]
     assuntos = [f"{i+1}. {a.strip().capitalize()}." for i, a in enumerate(dict.fromkeys(assuntos_limpos))]
     
-    entradas = ["I. Título."]
-    romanos = ["II.", "III.", "IV.", "V."]
-    for i, colab in enumerate(colaboradores):
-        if colab["nome"]: entradas.append(f"{romanos[min(i, 3)]} {formatar_entrada_autor(colab['nome'])} ({colab['tipo']}).")
+    # Geração dinâmica de algarismos romanos para as entradas secundárias
+    romanos = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
+    r_idx = 0
+    
+    entradas = [f"{romanos[r_idx]}. Título."]
+    r_idx += 1
+    
+    if orientador.strip():
+        entradas.append(f"{romanos[r_idx]}. {formatar_entrada_autor(orientador)}, orient.")
+        r_idx += 1
+        
+    if coorientador.strip():
+        entradas.append(f"{romanos[r_idx]}. {formatar_entrada_autor(coorientador)}, coorient.")
+        r_idx += 1
+        
+    for colab in colaboradores:
+        if colab["nome"].strip():
+            entradas.append(f"{romanos[min(r_idx, len(romanos)-1)]}. {formatar_entrada_autor(colab['nome'])} ({colab['tipo']}).")
+            r_idx += 1
     
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
@@ -131,20 +135,45 @@ with col_esq:
     
     c_pub1, c_pub2, c_pub3 = st.columns(3)
     with c_pub1: cidade = st.text_input("Cidade:")
-    with c_pub2: editora = st.text_input("Editora:")
+    with c_pub2: editora = st.text_input("Editora/Instituição de Defesa:")
     with c_pub3: ano = st.text_input("Ano:")
     
     c_desc1, c_desc2, c_desc3 = st.columns(3)
     with c_desc1: volumes = st.text_input("Volume/Edição:")
-    with c_desc2: paginas = st.text_input("Páginas:")
-    with c_desc3: isbn = st.text_input("ISBN:")
+    with c_desc2: paginas = st.text_input("Páginas (Ex: 150 p.):")
+    with c_desc3: isbn = st.text_input("ISBN (deixar vazio para teses):")
     
-    # --- BLOCO DE CLASSIFICAÇÃO SISTÊMICA ---
     c_class1, c_class2 = st.columns(2)
     with c_class1: classe_principal = st.text_input("Classe Principal DDC/CDU (Ex: 610):")
     with c_class2: classe_nlm = st.text_input("Classificação NLM (Ex: WG 140):")
 
     colecao_serie = st.text_input("Coleção ou Série (Opcional):")
+
+    # --- SEÇÃO DE TRABALHOS ACADÉMICOS ---
+    st.write("### 🎓 Trabalho Académico (Teses e Dissertações)")
+    e_trabalho_academico = st.checkbox("Esta obra é uma Tese, Dissertação ou Monografia de Residência?")
+    
+    grau_academico = "Nenhum"
+    area_concentracao = ""
+    instituicao = ""
+    orientador = ""
+    coorientador = ""
+    
+    if e_trabalho_academico:
+        c_acad1, c_acad2 = st.columns(2)
+        with c_acad1:
+            grau_academico = st.selectbox("Grau Académico:", [
+                "Nenhum", "Dissertação (Mestrado)", "Tese (Doutorado)", 
+                "Tese (Livre-Docência)", "Monografia (Residência Médica)", "Monografia (Especialização)"
+            ])
+        with c_acad2:
+            area_concentracao = st.text_input("Área de Concentração (Ex: Cardiologia):")
+            
+        instituicao = st.text_input("Faculdade/Instituição (Ex: Faculdade de Medicina, Universidade de São Paulo):")
+        
+        c_ori1, c_ori2 = st.columns(2)
+        with c_ori1: orientador = st.text_input("Nome do Orientador(a):")
+        with c_ori2: coorientador = st.text_input("Nome do Coorientador(a) (Opcional):")
 
     st.divider()
 
@@ -161,7 +190,7 @@ with col_esq:
                     st.session_state.autores.pop(i); st.rerun()
 
     with col_colab:
-        st.write("### ✍️ Colaboradores")
+        st.write("### ✍️ Colaboradores Extensão")
         if st.button("➕ Adicionar Colaborador", use_container_width=True): st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
         for i, colab in enumerate(st.session_state.colaboradores):
             c1, c2, c3 = st.columns([5, 3, 2])
@@ -193,10 +222,7 @@ with col_dir:
             if termo_escolhido['sinonimos']:
                 with st.expander(f"📝 Ver sinônimos ({len(termo_escolhido['sinonimos'])} encontrados)"):
                     st.write("Estes termos referem-se ao termo selecionado:")
-                    for s in termo_escolhido['sinonimos']:
-                        st.markdown(f"- {s}")
-            else:
-                st.info("Nenhum sinônimo direto encontrado para este termo.")
+                    for s in termo_escolhido['sinonimos']: st.markdown(f"- {s}")
             
             qualificadores_comuns = [
                 "Nenhum", "anatomia & histologia", "cirurgia", "citologia", "diagnóstico", 
@@ -223,8 +249,6 @@ with col_dir:
                     if st.button("🔄 Buscar mais resultados", use_container_width=True):
                         st.session_state.mesh_limite += 5
                         st.rerun()
-        else:
-            st.warning("Termo não encontrado ou erro na conexão.")
 
     st.write("### 📋 Assuntos Selecionados")
     if not st.session_state.lista_assuntos:
@@ -234,14 +258,8 @@ with col_dir:
             c_assunto, c_del_assunto = st.columns([8, 2])
             with c_assunto: st.markdown(f"• {assunto}")
             with c_del_assunto:
-                if st.button("❌", key=f"del_assunto_{i}", help="Remover este assunto"):
-                    st.session_state.lista_assuntos.pop(i)
-                    st.rerun()
-        
-        st.write("")
-        if st.button("🗑️ Limpar Todos os Assuntos", use_container_width=True):
-            st.session_state.lista_assuntos = []
-            st.rerun()
+                if st.button("❌", key=f"del_assunto_{i}"):
+                    st.session_state.lista_assuntos.pop(i); st.rerun()
 
     st.divider()
 
@@ -249,10 +267,8 @@ with col_dir:
     st.subheader("👁️ Pré-visualização")
     
     entrada, class_cutter, auts, lista_final = get_ficha_data(
-        titulo, 
-        st.session_state.autores, 
-        st.session_state.colaboradores, 
-        st.session_state.lista_assuntos
+        titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos,
+        orientador, coorientador
     )
 
     autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
@@ -260,7 +276,13 @@ with col_dir:
     titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
     colecao_str = f" ({colecao_serie})" if colecao_serie else ""
 
-    # Formatação condicional para empilhar NLM e DDC se ambos existirem
+    # Construção da Nota de Tese formatada pelas normas ABNT
+    nota_tese_str = ""
+    if grau_academico != "Nenhum":
+        area_str = f" em {area_concentracao}" if area_concentracao.strip() else ""
+        inst_str = f" – {instituicao}" if面 instituicao.strip() else ""
+        nota_tese_str = f"\n             {grau_academico}{area_str}{inst_str}, {cidade}, {ano}."
+
     bloco_classificacao = []
     if classe_nlm.strip(): bloco_classificacao.append(classe_nlm.strip())
     if classe_principal.strip(): bloco_classificacao.append(classe_principal.strip())
@@ -270,14 +292,13 @@ with col_dir:
 
     ficha_texto = f"""{bloco_esquerdo_top}       {entrada}.
              {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
-             {volumes_str}{paginas}.{colecao_str}{titulo_original_str}
+             {volumes_str}{paginas}.{colecao_str}{nota_tese_str}{titulo_original_str}
              ISBN {isbn if isbn else "..."}
 
              {' '.join(lista_final)}
 """
 
     st.markdown(f"```text\n{ficha_texto}\n```")
-    st.write("") 
 
     # --- CONTROLES DO LOTE ---
     col_lote_add, col_lote_del = st.columns(2)
@@ -287,83 +308,73 @@ with col_dir:
             st.session_state.fichas_lote.append({
                 "classe_nlm": classe_nlm.strip(), "classe_principal": classe_principal.strip(), 
                 "class_cutter": class_cutter, "entrada": entrada, "titulo": titulo, "autores_str": autores_str, 
-                "cidade": cidade, "editora": editora, "ano": ano, "volumes_str": volumes_str, "paginas": paginas, 
-                "colecao_str": colecao_str, "titulo_original_str": titulo_original_str, "isbn": isbn, "lista_final": lista_final
+                "cidade": city := cidade, "editora": editora, "ano": ano, "volumes_str": volumes_str, "paginas": paginas, 
+                "colecao_str": colecao_str, "nota_tese_str": nota_tese_str.strip(), "titulo_original_str": titulo_original_str, "isbn": isbn, "lista_final": lista_final
             })
             st.success(f"Ficha salva! Total no lote: {len(st.session_state.fichas_lote)}")
 
     with col_lote_del:
         if st.button("🗑️ Limpar Todo o Lote", use_container_width=True):
             st.session_state.fichas_lote = []
-            st.warning("O lote foi reiniciado e esvaziado.")
             st.rerun()
 
-    # Geração do arquivo Word (.docx) estruturado para o lote
+    # Geração do ficheiro DOCX
     if st.session_state.fichas_lote:
-        st.write(f"📦 **Status do Lote:** {len(st.session_state.fichas_lote)} ficha(s) salva(s).")
-        
         doc = Document()
         for idx, f in enumerate(st.session_state.fichas_lote):
             table = doc.add_table(rows=1, cols=1)
             table.style = 'Table Grid'
             table.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            
             cell = table.cell(0, 0)
             table.columns[0].width = Inches(5.3)
             cell.width = Inches(5.3)
             
             p_topo = cell.paragraphs[0]
-            p_topo.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p_topo.paragraph_format.space_after = Pt(0)
             p_topo.paragraph_format.line_spacing = 1.15
             
-            # Adiciona as linhas superiores de classificação (NLM e DDC) se existirem
             classes_linhas = []
             if f["classe_nlm"]: classes_linhas.append(f["classe_nlm"])
             if f["classe_principal"]: classes_linhas.append(f["classe_principal"])
             
             if classes_linhas:
                 r_classes = p_topo.add_run("\n".join(classes_linhas))
-                r_classes.font.name = 'Arial'
-                r_classes.font.size = Pt(10)
-                r_classes.bold = True
-                p_cutter_entrada = doc.add_paragraph() if False else cell.add_paragraph()
+                r_classes.font.name = 'Arial'; r_classes.font.size = Pt(10); r_classes.bold = True
+                p_cutter_entrada = cell.add_paragraph()
             else:
                 p_cutter_entrada = p_topo
                 
-            p_cutter_entrada.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p_cutter_entrada.paragraph_format.space_after = Pt(0)
             p_cutter_entrada.paragraph_format.line_spacing = 1.15
             p_cutter_entrada.paragraph_format.tab_stops.add_tab_stop(Inches(0.7)) 
             
             r_cutter = p_cutter_entrada.add_run(f["class_cutter"])
-            r_cutter.font.name = 'Arial'
-            r_cutter.font.size = Pt(10)
-            r_cutter.bold = True
-            
+            r_cutter.font.name = 'Arial'; r_cutter.font.size = Pt(10); r_cutter.bold = True
             p_cutter_entrada.add_run("\t") 
             
             r_ent = p_cutter_entrada.add_run(f"{f['entrada']}.")
-            r_ent.font.name = 'Arial'
-            r_ent.font.size = Pt(10)
+            r_ent.font.name = 'Arial'; r_ent.font.size = Pt(10)
             
             p_corpo = cell.add_paragraph()
-            p_corpo.alignment = WD_ALIGN_PARAGRAPH.LEFT
             p_corpo.paragraph_format.space_after = Pt(0)
             p_corpo.paragraph_format.line_spacing = 1.15
             p_corpo.paragraph_format.left_indent = Inches(0.7) 
             
             corpo_linhas = [
                 f"{f['titulo']} / {f['autores_str']}. – {f['cidade']} : {f['editora']}, {f['ano']}.",
-                f"{f['volumes_str']}{f['paginas']}.{f['colecao_str']}{f['titulo_original_str'].strip()}",
-                f"ISBN {f['isbn'] if f['isbn'] else '...'}",
-                "",
-                ' '.join(f['lista_final'])
+                f"{f['volumes_str']}{f['paginas']}.{f['colecao_str']}"
             ]
+            if f["nota_tese_str"]:
+                corpo_linhas.append(f["nota_tese_str"])
+            if f["titulo_original_str"].strip():
+                corpo_linhas.append(f["titulo_original_str"].strip())
+                
+            corpo_linhas.append(f"ISBN {f['isbn'] if f['isbn'] else '...'}")
+            corpo_linhas.append("")
+            corpo_linhas.append(' '.join(f['lista_final']))
             
             r_corpo = p_corpo.add_run("\n".join(corpo_linhas))
-            r_corpo.font.name = 'Arial'
-            r_corpo.font.size = Pt(10)
+            r_corpo.font.name = 'Arial'; r_corpo.font.size = Pt(10)
             
             if idx < len(st.session_state.fichas_lote) - 1:
                 doc.add_page_break()
