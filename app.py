@@ -224,7 +224,7 @@ with col_dir:
     st.divider()
 
     # --- PRÉ-VISUALIZAÇÃO DE TEXTO ---
-    st.subheader("👁️ Pré-visualização")
+    st.subheader("Pré-visualização")
     
     entrada, class_cutter, auts, lista_final = get_ficha_data(
         titulo, 
