@@ -280,7 +280,7 @@ with col_dir:
     nota_tese_str = ""
     if grau_academico != "Nenhum":
         area_str = f" em {area_concentracao}" if area_concentracao.strip() else ""
-        inst_str = f" – {instituicao}" if面 instituicao.strip() else ""
+        inst_str = f" – {instituicao}" if instituicao.strip() else ""
         nota_tese_str = f"\n             {grau_academico}{area_str}{inst_str}, {cidade}, {ano}."
 
     bloco_classificacao = []
