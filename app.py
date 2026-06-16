@@ -185,11 +185,27 @@ with col_dir:
             else:
                 st.info("Nenhum sinônimo direto encontrado para este termo.")
             
+            # --- NOVA SELECTBOX DE QUALIFICADORES (SUBHEADINGS) ---
+            qualificadores_comuns = [
+                "Nenhum", "anatomia & histologia", "cirurgia", "citologia", "diagnóstico", 
+                "dietoterapia", "efeitos adversos", "enfermagem", "enzimologia", "epidemiologia", 
+                "ética", "etiologia", "farmacologia", "fisiologia", "fisiopatologia", 
+                "genética", "imunologia", "lesões", "metabolismo", "microbiologia", 
+                "mortalidade", "patologia", "prevenção & controle", "psicologia", 
+                "radiografia", "reabilitação", "sangue", "terapia", "transplante", "urina"
+            ]
+            qualificador_escolhido = st.selectbox("Adicionar qualificador específico (Opcional):", qualificadores_comuns)
+            
             col_add, col_mais = st.columns(2)
             with col_add:
                 if st.button("➕ Adicionar como Assunto", use_container_width=True):
                     # Traduz e formata o termo selecionado
                     termo_em_portugues = traduzir_para_portugues(termo_escolhido['termo_oficial']).capitalize()
+                    
+                    # Se escolheu um qualificador específico, anexa ao termo
+                    if qualificador_escolhido != "Nenhum":
+                        termo_em_portugues = f"{termo_em_portugues} / {qualificador_escolhido}"
+                        
                     # Evita duplicados na lista ativa
                     if termo_em_portugues not in st.session_state.lista_assuntos:
                         st.session_state.lista_assuntos.append(termo_em_portugues)
@@ -224,7 +240,7 @@ with col_dir:
     st.divider()
 
     # --- PRÉ-VISUALIZAÇÃO DE TEXTO ---
-    st.subheader("Pré-visualização")
+    st.subheader("👁️ Pré-visualização")
     
     entrada, class_cutter, auts, lista_final = get_ficha_data(
         titulo, 
