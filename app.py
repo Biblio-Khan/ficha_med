@@ -188,9 +188,11 @@ with col_dir:
             col_add, col_mais = st.columns(2)
             with col_add:
                 if st.button("➕ Adicionar como Assunto", use_container_width=True):
-                    # Traduz o termo selecionado antes de incluí-lo na lista oficial
-                    termo_em_portugues = traduzir_para_portugues(termo_escolhido['termo_oficial'])
-                    st.session_state.lista_assuntos.append(termo_em_portugues)
+                    # Traduz e formata o termo selecionado
+                    termo_em_portugues = traduzir_para_portugues(termo_escolhido['termo_oficial']).capitalize()
+                    # Evita duplicados na lista ativa
+                    if termo_em_portugues not in st.session_state.lista_assuntos:
+                        st.session_state.lista_assuntos.append(termo_em_portugues)
                     st.rerun()
             with col_mais:
                 if len(resultados) == st.session_state.mesh_limite:
@@ -200,12 +202,24 @@ with col_dir:
         else:
             st.warning("Termo não encontrado ou erro na conexão.")
 
-    assuntos_validos = [str(a) for a in st.session_state.lista_assuntos if isinstance(a, str) and a]
-    st.caption("**Assuntos Selecionados (Traduzidos):** " + (", ".join(list(dict.fromkeys(assuntos_validos))) if assuntos_validos else "Nenhum ainda."))
-    
-    if st.button("🗑️ Limpar Assuntos"):
-        st.session_state.lista_assuntos = []
-        st.rerun()
+    st.write("### 📋 Assuntos Selecionados")
+    if not st.session_state.lista_assuntos:
+        st.caption("Nenhum assunto selecionado ainda.")
+    else:
+        # Apresentação individual com opção de exclusão por item
+        for i, assunto in enumerate(st.session_state.lista_assuntos):
+            c_assunto, c_del_assunto = st.columns([8, 2])
+            with c_assunto:
+                st.markdown(f"• {assunto}")
+            with c_del_assunto:
+                if st.button("❌", key=f"del_assunto_{i}", help="Remover este assunto"):
+                    st.session_state.lista_assuntos.pop(i)
+                    st.rerun()
+        
+        st.write("")
+        if st.button("🗑️ Limpar Todos os Assuntos", use_container_width=True):
+            st.session_state.lista_assuntos = []
+            st.rerun()
 
     st.divider()
 
