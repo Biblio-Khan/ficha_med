@@ -517,8 +517,10 @@ with abas[0]:
 
              {' '.join(lista_final)}"""
 
-        st.markdown(f"```text\n{ficha_texto}\n
-```")
+        # Código corrigido com aspas triplas para aceitar quebras de linha com segurança
+        st.markdown(f"""```text
+{ficha_texto}
+```""")
 
         col_lote_add, col_lote_del = st.columns(2)
         
