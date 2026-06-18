@@ -4,7 +4,7 @@ import requests
 import io
 import hashlib
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from docx import Document
 from docx.shared import Pt, Inches
 from deep_translator import GoogleTranslator
@@ -15,10 +15,11 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # =====================================================================
 st.set_page_config(page_title="BiblioKhan Médicas", page_icon="bibliokhan.ico", layout="wide")
 
-# CUSTOM CSS: Customização sutil para manter a identidade visual em roxo claro nos botões
+# Definição do Fuso Horário de Brasília (UTC-3)
+FUSO_BR = timezone(timedelta(hours=-3))
+
 st.markdown("""
     <style>
-    /* Cor dos botões principais */
     .stButton>button {
         background-color: #9B5DE5 !important;
         color: white !important;
@@ -29,14 +30,12 @@ st.markdown("""
         background-color: #8446CE !important;
         color: white !important;
     }
-    /* Estilização de caixas de avisos informativos */
     .stAlert {
         border-left-color: #9B5DE5 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# CORREÇÃO: Inicialização de Estados do Gerador no topo para evitar AttributeError
 if 'autenticado' not in st.session_state: st.session_state.autenticado = False
 if 'user_nome' not in st.session_state: st.session_state.user_nome = ""
 if 'user_email' not in st.session_state: st.session_state.user_email = ""
@@ -76,10 +75,21 @@ def validar_credenciais(email, senha):
     except:
         return False, None, None, 0
 
+def enviar_notificacao_telegram(nome, email, pacote):
+    """ Envia um alerta ao administrador via Telegram quando uma compra é feita """
+    token = st.secrets.get("TELEGRAM_BOT_TOKEN")
+    chat_id = st.secrets.get("TELEGRAM_ADMIN_CHAT_ID")
+    if token and chat_id:
+        msg = f"🔔 *Nova Compra de Créditos!*\n\n👤 *Usuário:* {nome}\n📧 *E-mail:* {email}\n📦 *Pacote:* {pacote} Fichas\n\n📌 _Verifique o Painel Admin para realizar a homologação._"
+        try:
+            requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"}, timeout=10)
+        except:
+            pass
+
 def cadastrar_novo_usuario(nome, email, senha, perfil):
     payload = {
         "action": "cadastro", "nome": nome.strip(), "email": email.strip().lower(),
-        "senha": hash_senha(senha), "perfil": perfil, "data_cadastro": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        "senha": hash_senha(senha), "perfil": perfil, "data_cadastro": datetime.now(FUSO_BR).strftime("%d/%m/%Y %H:%M:%S")
     }
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
@@ -104,7 +114,7 @@ def enviar_comprovante_nuvem(nome, email, pacote, foto_file):
         "action": "enviar_comprovante",
         "nome": nome, "email": email, "pacote": pacote,
         "image_base64": img_base64, "image_type": foto_file.type,
-        "data": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        "data": datetime.now(FUSO_BR).strftime("%d/%m/%Y %H:%M:%S")
     }
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=20)
@@ -235,7 +245,6 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos, orientador=""
 # TELA DE LOGIN / CADASTRO
 # =====================================================================
 if not st.session_state.autenticado:
-    # CORREÇÃO: Layout vertical (um embaixo do outro) e nome correto da logo
     try:
         st.image("logo_bibliokhan.png", width=180)
     except:
@@ -295,7 +304,6 @@ if not st.session_state.autenticado:
 
 # --- BARRA LATERAL (SIDEBAR) ---
 try:
-    # CORREÇÃO: Nome correto do arquivo também na barra lateral
     st.sidebar.image("logo_bibliokhan.png", use_container_width=True)
 except:
     pass
@@ -509,7 +517,8 @@ with abas[0]:
 
              {' '.join(lista_final)}"""
 
-        st.markdown(f"```text\n{ficha_texto}\n```")
+        st.markdown(f"```text\n{ficha_texto}\n
+```")
 
         col_lote_add, col_lote_del = st.columns(2)
         
@@ -599,7 +608,13 @@ with abas[0]:
                         
             bio = io.BytesIO()
             doc.save(bio)
-            st.download_button("Baixar Fichas em Lote (.docx)", data=bio.getvalue(), file_name="lote_fichas_catalograficas.docx", use_container_width=True)
+            
+            st.download_button(
+                f"Baixar Lote ({len(st.session_state.fichas_lote)} Fichas) (.docx)", 
+                data=bio.getvalue(), 
+                file_name="lote_fichas_catalograficas.docx", 
+                use_container_width=True
+            )
 
 # ---------------------------------------------------------------------
 # ABA 2: COMPRA DE FICHAS
@@ -612,7 +627,7 @@ with abas[1]:
     with col_p:
         st.markdown("### Pacotes Avulsos")
         st.info("""
-        Tabela de valores para recarga de saldo no sistema:
+        Tabela de valores para recarga de saldo no system:
         * **20 Fichas:** R$ 55,00
         * **30 Fichas:** R$ 80,00
         * **100 Fichas:** R$ 240,00
@@ -656,6 +671,7 @@ with abas[1]:
                     )
                     if ok: 
                         st.success("Comprovante enviado com sucesso. O saldo será atualizado após validação interna.")
+                        enviar_notificacao_telegram(st.session_state.user_nome, st.session_state.user_email, pacote_qtd)
                     else: 
                         st.error(f"Erro ao registrar envio: {msg}")
             else: 
