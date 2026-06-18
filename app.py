@@ -13,6 +13,12 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # =====================================================================
 # CONFIGURAÇÕES DA PÁGINA E SESSÃO
 # =====================================================================
+
+st.set_page_config(
+    page_title="Gerador de Fichas Médicas",
+    page_icon="logo_bibliokhan.ico",
+    layout="wide"
+)
 st.set_page_config(page_title="BiblioKhan Médicas", page_icon="bibliokhan.ico", layout="wide")
 
 # CUSTOM CSS: Customização sutil para manter a identidade visual em roxo claro nos botões
