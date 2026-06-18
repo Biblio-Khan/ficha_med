@@ -638,8 +638,8 @@ with abas[1]:
         * **800 Fichas:** R$ 1.440,00
         
         ---
-        Chave PIX para transferência institucional:
-        `pix@bibliokhan.com`
+        Chave PIX para transferência:
+        `bibliokhancontato@gmail.com`
         """)
         
     with col_c:
