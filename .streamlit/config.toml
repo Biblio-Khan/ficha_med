@@ -1,2 +1,8 @@
 [server]
 enableStaticServing = true
+# .streamlit/config.toml
+[theme]
+primaryColor = "#9B5DE5"          # Roxo Claro (Cor principal de abas e foco)
+backgroundColor = "#FFFFFF"       # Fundo branco limpo para a área de trabalho
+secondaryBackgroundColor = "#F8F6FC" # Fundo arroxeado bem clarinho para a barra lateral esquerda
+textColor = "#2B2B2B"             # Texto escuro com ótimo contraste
