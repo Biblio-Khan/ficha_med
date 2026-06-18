@@ -14,13 +14,20 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # CONFIGURAÇÕES DA PÁGINA E SESSÃO
 # =====================================================================
 
-st.set_page_config(
-    page_title="Gerador de Fichas Médicas",
-    page_icon="logo_bibliokhan.ico",
-    layout="wide"
-)
-st.set_page_config(page_title="BiblioKhan Médicas", page_icon="bibliokhan.ico", layout="wide")
-
+if not st.session_state.autenticado:
+    # A logo agora fica no topo
+    try:
+        # Dica: usei width=180 para a logo não ficar gigante na tela sem as colunas
+        st.image("logo_bibliokhan.png", width=180) 
+    except:
+        st.text("")
+        
+    # O título e os textos vêm logo abaixo, naturalmente
+    st.title("BiblioKhan Médicas")
+    st.markdown("### BiblioKhan inteligência e automação para bibliotecas")
+    st.caption("Contato de Suporte: Bibliokhancontato@gmail.com")
+        
+    st.divider()
 # CUSTOM CSS: Customização sutil para manter a identidade visual em roxo claro nos botões
 st.markdown("""
     <style>
