@@ -13,24 +13,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # =====================================================================
 # CONFIGURAÇÕES DA PÁGINA E SESSÃO
 # =====================================================================
+st.set_page_config(page_title="BiblioKhan Médicas", page_icon="bibliokhan.ico", layout="wide")
 
-if not st.session_state.autenticado:
-    # 1. Apenas a imagem no topo
-    try:
-        st.image("logo_bibliokhan.png", width=180) 
-    except:
-        st.text("")
-        
-    # 2. Os textos logo abaixo (apenas uma vez)
-    st.title("BiblioKhan Médicas")
-    st.markdown("### BiblioKhan inteligência e automação para bibliotecas")
-    st.caption("Contato de Suporte: Bibliokhancontato@gmail.com")
-        
-    st.divider()
-            
-    # Havia um "st.subheader" aqui em baixo, mantenha-o assim:
-    st.subheader("Identifique-se para acessar o sistema")
-    
 # CUSTOM CSS: Customização sutil para manter a identidade visual em roxo claro nos botões
 st.markdown("""
     <style>
@@ -52,7 +36,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Inicialização de Estados do Gerador + Sistema de Autenticação
+# CORREÇÃO: Inicialização de Estados do Gerador no topo para evitar AttributeError
 if 'autenticado' not in st.session_state: st.session_state.autenticado = False
 if 'user_nome' not in st.session_state: st.session_state.user_nome = ""
 if 'user_email' not in st.session_state: st.session_state.user_email = ""
@@ -251,17 +235,16 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos, orientador=""
 # TELA DE LOGIN / CADASTRO
 # =====================================================================
 if not st.session_state.autenticado:
-    c_logo, c_titulo = st.columns([1, 5])
-    with c_logo:
-        try:
-            st.image("bibliokhan.png", use_container_width=True)
-        except:
-            st.text("")
-    with c_titulo:
-        st.title("BiblioKhan Médicas")
+    # CORREÇÃO: Layout vertical (um embaixo do outro) e nome correto da logo
+    try:
+        st.image("logo_bibliokhan.png", width=180)
+    except:
+        st.text("")
         
+    st.title("BiblioKhan Médicas")
     st.markdown("### BiblioKhan inteligência e automação para bibliotecas")
     st.caption("Contato de Suporte: Bibliokhancontato@gmail.com")
+        
     st.divider()
             
     st.subheader("Identifique-se para acessar o sistema")
@@ -312,7 +295,8 @@ if not st.session_state.autenticado:
 
 # --- BARRA LATERAL (SIDEBAR) ---
 try:
-    st.sidebar.image("bibliokhan.png", use_container_width=True)
+    # CORREÇÃO: Nome correto do arquivo também na barra lateral
+    st.sidebar.image("logo_bibliokhan.png", use_container_width=True)
 except:
     pass
 
