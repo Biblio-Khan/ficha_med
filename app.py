@@ -13,7 +13,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # =====================================================================
 # ⚙️ CONFIGURAÇÕES DA PÁGINA E SESSÃO (DEVE SER O PRIMEIRO COMANDO)
 # =====================================================================
-st.set_page_config(page_title="BiblioKhan Médicas", page_icon="bibliokhan.ico", layout="wide")
+st.set_page_config(page_title="BiblioKhan Médicas", page_icon="logo_bibliokhan.ico", layout="wide")
 
 # 💜 CUSTOM CSS: Força elementos principais e botões a ficarem no tom roxo claro
 st.markdown("""
