@@ -11,22 +11,22 @@ from deep_translator import GoogleTranslator
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # =====================================================================
-# ⚙️ CONFIGURAÇÕES DA PÁGINA E SESSÃO (DEVE SER O PRIMEIRO COMANDO)
+# CONFIGURAÇÕES DA PÁGINA E SESSÃO
 # =====================================================================
-st.set_page_config(page_title="BiblioKhan Médicas", page_icon="logo_bibliokhan.ico", layout="wide")
+st.set_page_config(page_title="BiblioKhan Médicas", page_icon="bibliokhan.ico", layout="wide")
 
-# 💜 CUSTOM CSS: Força elementos principais e botões a ficarem no tom roxo claro
+# CUSTOM CSS: Customização sutil para manter a identidade visual em roxo claro nos botões
 st.markdown("""
     <style>
     /* Cor dos botões principais */
     .stButton>button {
-        background-color: #9B5DE5 !important; /* Roxo claro */
+        background-color: #9B5DE5 !important;
         color: white !important;
         border-radius: 8px !important;
         border: none !important;
     }
     .stButton>button:hover {
-        background-color: #8446CE !important; /* Roxo um pouco mais escuro ao passar o mouse */
+        background-color: #8446CE !important;
         color: white !important;
     }
     /* Estilização de caixas de avisos informativos */
@@ -51,16 +51,16 @@ if 'ultimo_termo' not in st.session_state: st.session_state.ultimo_termo = ""
 if 'fichas_lote' not in st.session_state: st.session_state.fichas_lote = []
 
 # =====================================================================
-# 🔐 CONFIGURAÇÃO DA API DO GOOGLE (VIA STREAMLIT SECRETS)
+# CONFIGURAÇÃO DA API DO GOOGLE (VIA STREAMLIT SECRETS)
 # =====================================================================
 try:
     URL_API_GOOGLE = st.secrets["URL_API_GOOGLE"]
 except KeyError:
-    st.error("🚨 Erro: A variável 'URL_API_GOOGLE' não foi configurada nos Secrets do Streamlit.")
+    st.error("Erro: A variável 'URL_API_GOOGLE' não foi configurada nos Secrets do Streamlit.")
     st.stop()
 
 # =====================================================================
-# 🛠️ FUNÇÕES DO SISTEMA DE CRÉDITOS E AUTENTICAÇÃO
+# FUNÇÕES DO SISTEMA DE CRÉDITOS E AUTENTICAÇÃO
 # =====================================================================
 def hash_senha(senha):
     return hashlib.sha256(senha.encode()).hexdigest()
@@ -119,7 +119,7 @@ def api_obter_pedidos_pendentes():
     except:
         return []
 
-def abrir_pedido_nuvem(id_pedido):
+def aprovar_pedido_nuvem(id_pedido):
     payload = {"action": "aprovar_pedido", "id_pedido": id_pedido}
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
@@ -128,7 +128,7 @@ def abrir_pedido_nuvem(id_pedido):
         return False
 
 # =====================================================================
-# 📚 FUNÇÕES ORIGINAIS DO GERADOR DE FICHAS CATALOGRÁFICAS
+# FUNÇÕES ORIGINAIS DO GERADOR DE FICHAS CATALOGRÁFICAS
 # =====================================================================
 def traduzir_para_portugues(texto):
     try:
@@ -232,27 +232,25 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos, orientador=""
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
 # =====================================================================
-# 🚪 TELA DE LOGIN / CADASTRO
+# TELA DE LOGIN / CADASTRO
 # =====================================================================
 if not st.session_state.autenticado:
-    # 🖼️ Estrutura Lado a Lado: Logo à esquerda, Título à direita
     c_logo, c_titulo = st.columns([1, 5])
     with c_logo:
         try:
             st.image("bibliokhan.png", use_container_width=True)
         except:
-            st.title("🩺")
+            st.text("")
     with c_titulo:
         st.title("BiblioKhan Médicas")
         
-    # 📝 Texto institucional e de contato logo abaixo
-    st.markdown("### **BiblioKhan inteligência e automação para bibliotecas**")
-    st.caption("📧 Contato de Suporte: **Bibliokhancontato@gmail.com**")
+    st.markdown("### BiblioKhan inteligência e automação para bibliotecas")
+    st.caption("Contato de Suporte: Bibliokhancontato@gmail.com")
     st.divider()
             
-    st.subheader("🔐 Identifique-se para aceder ao sistema")
+    st.subheader("Identifique-se para acessar o sistema")
     
-    aba_login, aba_cadastro = st.tabs(["🚪 Iniciar Sessão", "📝 Criar Nova Conta"])
+    aba_login, aba_cadastro = st.tabs(["Iniciar Sessão", "Criar Nova Conta"])
     
     with aba_login:
         log_email = st.text_input("E-mail:")
@@ -268,7 +266,7 @@ if not st.session_state.autenticado:
                     st.session_state.user_perfil = perfil_user
                     st.session_state.user_creditos = creditos_user
                     
-                    st.success(f"🎉 Olá, {nome_user}! Login efetuado com sucesso.")
+                    st.success(f"Olá, {nome_user}! Login efetuado com sucesso.")
                     st.rerun()
                 else:
                     st.error("E-mail ou senha incorretos.")
@@ -293,37 +291,36 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =====================================================================
-# 📊 INTERFACE PRINCIPAL DO APPLICATIVO (SESSÃO ATIVA)
+# INTERFACE PRINCIPAL DO APLICATIVO (SESSÃO ATIVA)
 # =====================================================================
 
-# --- BARRA LATERAL (SIDEBAR - TELA À ESQUERDA) ---
+# --- BARRA LATERAL (SIDEBAR) ---
 try:
     st.sidebar.image("bibliokhan.png", use_container_width=True)
 except:
     pass
 
-st.sidebar.markdown(f"### 👤 Sessão Ativa")
+st.sidebar.markdown(f"### Sessão Ativa")
 st.sidebar.markdown(f"**Olá, {st.session_state.user_nome}!**")
 st.sidebar.markdown(f"**Cargo:** {st.session_state.user_perfil}")
 
 if st.session_state.user_creditos > 0:
-    st.sidebar.success(f"🪙 **Créditos:** {st.session_state.user_creditos} fichas")
+    st.sidebar.success(f"Créditos disponíveis: {st.session_state.user_creditos}")
 else:
-    st.sidebar.error(f"🚨 **Créditos:** {st.session_state.user_creditos} (Bloqueado)")
+    st.sidebar.error(f"Créditos: {st.session_state.user_creditos} (Acesso Suspenso)")
 
-if st.sidebar.button("🚪 Terminar Sessão", use_container_width=True):
+if st.sidebar.button("Terminar Sessão", use_container_width=True):
     st.session_state.autenticado = False
     st.rerun()
 
-# 📝 Rodapé Fixo da Barra Lateral
 st.sidebar.markdown("---")
-st.sidebar.caption("**BiblioKhan inteligência e automação para bibliotecas**")
-st.sidebar.caption("📧 *Bibliokhancontato@gmail.com*")
+st.sidebar.caption("BiblioKhan inteligência e automação para bibliotecas")
+st.sidebar.caption("Bibliokhancontato@gmail.com")
 
-# --- CONFIGURAÇÃO DE ABAS DINÂMICAS ---
-abas_disponiveis = ["📄 Gerar Fichas", "🪙 Comprar Fichas"]
+# --- CONFIGURAÇÃO DE ABAS ---
+abas_disponiveis = ["Gerar Fichas", "Comprar Fichas"]
 if st.session_state.user_perfil == "Administrador(a)":
-    abas_disponiveis.append("🔧 Painel Admin")
+    abas_disponiveis.append("Painel Admin")
 
 abas = st.tabs(abas_disponiveis)
 
@@ -333,12 +330,12 @@ abas = st.tabs(abas_disponiveis)
 with abas[0]:
     esta_bloqueado = st.session_state.user_creditos <= 0
     if esta_bloqueado:
-        st.error("⚠️ **Função Bloqueada:** O seu saldo de fichas terminou. Aceda à aba 'Comprar Fichas' para renovar o seu acesso.")
+        st.error("Função Bloqueada: O seu saldo de fichas terminou. Acesse a aba 'Comprar Fichas' para renovar o seu acesso.")
 
     col_esq, col_dir = st.columns([1.5, 1], gap="large")
 
     with col_esq:
-        st.subheader("📚 Dados da Obra")
+        st.subheader("Dados da Obra")
         
         c_tit1, c_tit2 = st.columns(2)
         with c_tit1: titulo = st.text_input("Título da obra:", disabled=esta_bloqueado)
@@ -360,7 +357,7 @@ with abas[0]:
 
         colecao_serie = st.text_input("Coleção ou Série (Opcional):", disabled=esta_bloqueado)
 
-        st.write("### 🎓 Trabalho Académico (Teses e Dissertações)")
+        st.write("### Trabalho Acadêmico (Teses e Dissertações)")
         e_trabalho_academico = st.checkbox("Esta obra é uma Tese, Dissertação ou Monografia de Residência?", disabled=esta_bloqueado)
         
         grau_academico = "Nenhum"
@@ -372,7 +369,7 @@ with abas[0]:
         if e_trabalho_academico:
             c_acad1, c_acad2 = st.columns(2)
             with c_acad1:
-                grau_academico = st.selectbox("Grau Académico:", [
+                grau_academico = st.selectbox("Grau Acadêmico:", [
                     "Nenhum", "Dissertação (Mestrado)", "Tese (Doutorado)", 
                     "Tese (Livre-Docência)", "Monografia (Residência Médica)", "Monografia (Especialização)"
                 ], disabled=esta_bloqueado)
@@ -390,21 +387,21 @@ with abas[0]:
         col_autores, col_colab = st.columns(2)
         
         with col_autores:
-            st.write("### 👥 Autores")
-            if st.button("➕ Adicionar Autor", use_container_width=True, disabled=esta_bloqueado): 
+            st.write("### Autores")
+            if st.button("Adicionar Autor", use_container_width=True, disabled=esta_bloqueado): 
                 st.session_state.autores.append("")
                 st.rerun()
             for i, aut in enumerate(st.session_state.autores):
                 c1, c2 = st.columns([8, 2])
                 with c1: st.session_state.autores[i] = st.text_input(f"Autor {i+1}", value=aut, key=f"aut_{i}", label_visibility="collapsed", disabled=esta_bloqueado)
                 with c2:
-                    if st.button("❌", key=f"del_aut_{i}", disabled=esta_bloqueado) and len(st.session_state.autores) > 1:
+                    if st.button("Remover", key=f"del_aut_{i}", disabled=esta_bloqueado) and len(st.session_state.autores) > 1:
                         st.session_state.autores.pop(i)
                         st.rerun()
 
         with col_colab:
-            st.write("### ✍️ Colaboradores Extensão")
-            if st.button("➕ Adicionar Colaborador", use_container_width=True, disabled=esta_bloqueado): 
+            st.write("### Colaboradores Extensão")
+            if st.button("Adicionar Colaborador", use_container_width=True, disabled=esta_bloqueado): 
                 st.session_state.colaboradores.append({"nome": "", "tipo": "trad."})
                 st.rerun()
             for i, colab in enumerate(st.session_state.colaboradores):
@@ -412,12 +409,12 @@ with abas[0]:
                 with c1: colab["nome"] = st.text_input("Nome", value=colab["nome"], key=f"colab_nome_{i}", label_visibility="collapsed", disabled=esta_bloqueado)
                 with c2: colab["tipo"] = st.selectbox("Função", ["trad.", "org.", "comp."], key=f"colab_tipo_{i}", label_visibility="collapsed", disabled=esta_bloqueado)
                 with c3:
-                    if st.button("❌", key=f"del_colab_{i}", disabled=esta_bloqueado): 
+                    if st.button("Remover", key=f"del_colab_{i}", disabled=esta_bloqueado): 
                         st.session_state.colaboradores.pop(i)
                         st.rerun()
 
     with col_dir:
-        st.subheader("🔍 Assuntos e Indexação (MeSH)")
+        st.subheader("Assuntos e Indexação (MeSH)")
         termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:", disabled=esta_bloqueado)
         
         if termo_busca and not esta_bloqueado:
@@ -433,10 +430,10 @@ with abas[0]:
                 escolha = st.selectbox("Selecione o termo mais adequado:", opcoes_nomes)
                 termo_escolhido = next(r for r in resultados if r["termo_oficial"] == escolha)
                 
-                st.markdown(f"### 📍 Termo Autorizado (En): **{termo_escolhido['termo_oficial']}**")
+                st.markdown(f"### Termo Autorizado (En): **{termo_escolhido['termo_oficial']}**")
                 
                 if termo_escolhido['sinonimos']:
-                    with st.expander(f"📝 Ver sinônimos ({len(termo_escolhido['sinonimos'])} encontrados)"):
+                    with st.expander(f"Ver sinônimos ({len(termo_escolhido['sinonimos'])} encontrados)"):
                         st.write("Estes termos referem-se ao termo selecionado:")
                         for s in termo_escolhido['sinonimos']: st.markdown(f"- {s}")
                 
@@ -452,7 +449,7 @@ with abas[0]:
                 
                 col_add, col_mais = st.columns(2)
                 with col_add:
-                    if st.button("➕ Adicionar como Assunto", use_container_width=True):
+                    if st.button("Adicionar como Assunto", use_container_width=True):
                         termo_em_portugues = traduzir_para_portugues(termo_escolhido['termo_oficial']).capitalize()
                         if qualificador_escolhido != "Nenhum":
                             termo_em_portugues = f"{termo_em_portugues} / {qualificador_escolhido}"
@@ -462,11 +459,11 @@ with abas[0]:
                         st.rerun()
                 with col_mais:
                     if len(resultados) == st.session_state.mesh_limite:
-                        if st.button("🔄 Buscar mais resultados", use_container_width=True):
+                        if st.button("Buscar mais resultados", use_container_width=True):
                             st.session_state.mesh_limite += 5
                             st.rerun()
 
-        st.write("### 📋 Assuntos Selecionados")
+        st.write("### Assuntos Selecionados")
         if not st.session_state.lista_assuntos:
             st.caption("Nenhum assunto selecionado ainda.")
         else:
@@ -474,13 +471,13 @@ with abas[0]:
                 c_assunto, c_del_assunto = st.columns([8, 2])
                 with c_assunto: st.markdown(f"• {assunto}")
                 with c_del_assunto:
-                    if st.button("❌", key=f"del_assunto_{i}", disabled=esta_bloqueado):
+                    if st.button("Remover", key=f"del_assunto_{i}", disabled=esta_bloqueado):
                         st.session_state.lista_assuntos.pop(i)
                         st.rerun()
 
         st.divider()
 
-        st.subheader("👁️ Pré-visualização")
+        st.subheader("Pré-visualização")
         
         entrada, class_cutter, auts, lista_final = get_ficha_data(
             titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos,
@@ -518,8 +515,8 @@ with abas[0]:
         
         with col_lote_add:
             desativar_lote = esta_bloqueado or not titulo
-            if st.button("➕ Adicionar ao Lote", use_container_width=True, disabled=desativar_lote):
-                with st.spinner("Consumindo 1 crédito na nuvem..."):
+            if st.button("Adicionar ao Lote", use_container_width=True, disabled=desativar_lote):
+                with st.spinner("Processando transação de créditos..."):
                     sucesso_desconto, novos_creditos = subtrair_credito_nuvem(st.session_state.user_email)
                     
                     if sucesso_desconto:
@@ -530,13 +527,13 @@ with abas[0]:
                             "cidade": cidade, "editora": editora, "ano": ano, "volumes_str": volumes_str, "paginas": paginas, 
                             "colecao_str": colecao_str, "nota_tese_str": nota_tese_str.strip(), "titulo_original_str": titulo_original_str, "isbn": isbn, "lista_final": lista_final
                         })
-                        st.success(f"✨ Ficha salva! 1 Crédito deduzido. Total no lote: {len(st.session_state.fichas_lote)}")
+                        st.success(f"Ficha salva com sucesso. Saldo atualizado. Total no lote: {len(st.session_state.fichas_lote)}")
                         st.rerun()
                     else:
-                        st.error("Não foi possível validar os seus créditos na nuvem. Ação cancelada.")
+                        st.error("Falha ao validar os créditos na nuvem. Ação interrompida.")
 
         with col_lote_del:
-            if st.button("🗑️ Limpar Todo o Lote", use_container_width=True):
+            if st.button("Limpar Todo o Lote", use_container_width=True):
                 st.session_state.fichas_lote = []
                 st.rerun()
 
@@ -602,34 +599,34 @@ with abas[0]:
                         
             bio = io.BytesIO()
             doc.save(bio)
-            st.download_button("📥 Baixar Fichas em Lote (.docx)", data=bio.getvalue(), file_name="lote_fichas_catalograficas.docx", use_container_width=True)
+            st.download_button("Baixar Fichas em Lote (.docx)", data=bio.getvalue(), file_name="lote_fichas_catalograficas.docx", use_container_width=True)
 
 # ---------------------------------------------------------------------
 # ABA 2: COMPRA DE FICHAS
 # ---------------------------------------------------------------------
 with abas[1]:
-    st.title("🪙 Central de Créditos")
-    st.write(f"Seu saldo atual: **{st.session_state.user_creditos}** fichas.")
+    st.title("Central de Créditos")
+    st.write(f"Seu saldo atual: {st.session_state.user_creditos} créditos.")
     
     col_p, col_c = st.columns([1.1, 1])
     with col_p:
-        st.markdown("### 💰 Pacotes Avulsos (Uso Pontual)")
+        st.markdown("### Pacotes Avulsos")
         st.info("""
-        Ideal para demandas pontuais e utilizadores autónomos:
-        * **20 Fichas:** R$ 55,00 *(R$ 2,75 por ficha)*
-        * **30 Fichas:** R$ 80,00 *(R$ 2,66 por ficha)*
-        * **100 Fichas:** R$ 240,00 *(R$ 2,40 por ficha)*
-        * **300 Fichas:** R$ 660,00 *(R$ 2,20 por ficha)*
-        * **600 Fichas:** R$ 1.200,00 *(R$ 2,00 por ficha)*
-        * **800 Fichas:** R$ 1.440,00 *(R$ 1,80 por ficha)*
+        Tabela de valores para recarga de saldo no sistema:
+        * **20 Fichas:** R$ 55,00
+        * **30 Fichas:** R$ 80,00
+        * **100 Fichas:** R$ 240,00
+        * **300 Fichas:** R$ 660,00
+        * **600 Fichas:** R$ 1.200,00
+        * **800 Fichas:** R$ 1.440,00
         
         ---
-        📱 **Chave PIX para pagamento:**
+        Chave PIX para transferência institucional:
         `pix@bibliokhan.com`
         """)
         
     with col_c:
-        st.markdown("### 📑 Enviar Comprovante")
+        st.markdown("### Enviar Comprovante")
         
         opcoes_pacotes = {
             20: "20 Fichas — R$ 55,00",
@@ -641,16 +638,16 @@ with abas[1]:
         }
         
         pacote_qtd = st.selectbox(
-            "Qual pacote avulso adquiriu?", 
+            "Selecione o pacote adquirido:", 
             options=list(opcoes_pacotes.keys()), 
             format_func=lambda x: opcoes_pacotes[x]
         )
         
-        comprovante_file = st.file_uploader("Carregue a foto ou print do PIX:", type=["png", "jpg", "jpeg"])
+        comprovante_file = st.file_uploader("Upload do comprovante Pix (PDF ou Imagem):", type=["png", "jpg", "jpeg"])
         
-        if st.button("🚀 Enviar para Aprovação", use_container_width=True):
+        if st.button("Enviar para Aprovação", use_container_width=True):
             if comprovante_file:
-                with st.spinner("Enviando comprovante para o sistema..."):
+                with st.spinner("Enviando dados do comprovante..."):
                     ok, msg = enviar_comprovante_nuvem(
                         st.session_state.user_nome, 
                         st.session_state.user_email, 
@@ -658,40 +655,40 @@ with abas[1]:
                         comprovante_file
                     )
                     if ok: 
-                        st.success("✅ **Comprovante enviado com sucesso!** O administrador foi notificado e já pode liberar os seus créditos no painel.")
+                        st.success("Comprovante enviado com sucesso. O saldo será atualizado após validação interna.")
                     else: 
-                        st.error(f"Erro ao enviar: {msg}")
+                        st.error(f"Erro ao registrar envio: {msg}")
             else: 
-                st.warning("⚠️ Por favor, faça o upload da foto do comprovante antes de enviar.")
+                st.warning("Por favor, anexe o comprovante antes de prosseguir.")
 
 # ---------------------------------------------------------------------
 # ABA 3: PAINEL ADMIN
 # ---------------------------------------------------------------------
 if st.session_state.user_perfil == "Administrador(a)":
     with abas[2]:
-        st.title("🔧 Painel de Aprovação de Créditos")
-        st.write("Lista de comprovantes pendentes recebidos:")
+        st.title("Painel de Aprovação de Créditos")
+        st.write("Solicitações aguardando processamento:")
         
         pedidos_pendentes = api_obter_pedidos_pendentes()
             
         if not pedidos_pendentes:
-            st.info("✨ Nenhum pedido pendente de aprovação neste momento!")
+            st.info("Nenhuma solicitação pendente de homologação.")
         else:
             for ped in pedidos_pendentes:
                 with st.container(border=True):
                     col1, col2 = st.columns([2, 1])
                     with col1:
                         st.markdown(f"**Pedido:** `{ped['id_pedido']}` | **Data:** {ped['data']}")
-                        st.markdown(f"👤 **Usuário:** {ped['nome']} ({ped['email']})")
-                        st.markdown(f"📦 **Pacote Solicitado:** `{ped['pacote']}` Fichas")
-                        st.markdown(f"[🔗 Abrir Foto do Comprovante Original]({ped['url']})")
+                        st.markdown(f"**Usuário:** {ped['nome']} ({ped['email']})")
+                        st.markdown(f"**Volume Solicitado:** `{ped['pacote']}` Fichas")
+                        st.markdown(f"[Visualizar Imagem do Comprovante]({ped['url']})")
                     
                     with col2:
                         st.write("")
-                        if st.button(f"✅ Aprovar Saldo", key=f"btn_{ped['id_pedido']}", use_container_width=True):
-                            with st.spinner("Processando aprovação e atualizando banco..."):
+                        if st.button(f"Aprovar Créditos", key=f"btn_{ped['id_pedido']}", use_container_width=True):
+                            with st.spinner("Atualizando registros no banco de dados..."):
                                 if aprovar_pedido_nuvem(ped['id_pedido']):
-                                    st.success(f"Créditos definidos! Saldo fixado em {ped['pacote']}.")
+                                    st.success("Créditos liberados com sucesso.")
                                     st.rerun()
                                 else:
-                                    st.error("Erro ao processar aprovação.")
+                                    st.error("Erro ao tentar atualizar o saldo.")
