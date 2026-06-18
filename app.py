@@ -13,9 +13,30 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # =====================================================================
 # ⚙️ CONFIGURAÇÕES DA PÁGINA E SESSÃO (DEVE SER O PRIMEIRO COMANDO)
 # =====================================================================
-st.set_page_config(page_title="BiblioKhan Médicas", page_icon="🩺", layout="wide")
+st.set_page_config(page_title="BiblioKhan Médicas", page_icon="bibliokhan.ico", layout="wide")
 
-# Inicialização de Estados do Gerador Antigo + Sistema de Autenticação
+# 💜 CUSTOM CSS: Força elementos principais e botões a ficarem no tom roxo claro
+st.markdown("""
+    <style>
+    /* Cor dos botões principais */
+    .stButton>button {
+        background-color: #9B5DE5 !important; /* Roxo claro */
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+    }
+    .stButton>button:hover {
+        background-color: #8446CE !important; /* Roxo um pouco mais escuro ao passar o mouse */
+        color: white !important;
+    }
+    /* Estilização de caixas de avisos informativos */
+    .stAlert {
+        border-left-color: #9B5DE5 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Inicialização de Estados do Gerador + Sistema de Autenticação
 if 'autenticado' not in st.session_state: st.session_state.autenticado = False
 if 'user_nome' not in st.session_state: st.session_state.user_nome = ""
 if 'user_email' not in st.session_state: st.session_state.user_email = ""
@@ -42,7 +63,6 @@ except KeyError:
 # 🛠️ FUNÇÕES DO SISTEMA DE CRÉDITOS E AUTENTICAÇÃO
 # =====================================================================
 def hash_senha(senha):
-    """Criptografa a senha em SHA-256 para maior segurança."""
     return hashlib.sha256(senha.encode()).hexdigest()
 
 def validar_credenciais(email, senha):
@@ -99,7 +119,7 @@ def api_obter_pedidos_pendentes():
     except:
         return []
 
-def aprovar_pedido_nuvem(id_pedido):
+def abrir_pedido_nuvem(id_pedido):
     payload = {"action": "aprovar_pedido", "id_pedido": id_pedido}
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
@@ -212,10 +232,24 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos, orientador=""
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
 # =====================================================================
-# 🚪 TELA DE LOGIN / CADASTRO (BLOQUEIO DE ACESSO FLUIDO)
+# 🚪 TELA DE LOGIN / CADASTRO
 # =====================================================================
 if not st.session_state.autenticado:
-    st.title("🩺 BiblioKhan Médicas")
+    # 🖼️ Estrutura Lado a Lado: Logo à esquerda, Título à direita
+    c_logo, c_titulo = st.columns([1, 5])
+    with c_logo:
+        try:
+            st.image("bibliokhan.png", use_container_width=True)
+        except:
+            st.title("🩺")
+    with c_titulo:
+        st.title("BiblioKhan Médicas")
+        
+    # 📝 Texto institucional e de contato logo abaixo
+    st.markdown("### **BiblioKhan inteligência e automação para bibliotecas**")
+    st.caption("📧 Contato de Suporte: **Bibliokhancontato@gmail.com**")
+    st.divider()
+            
     st.subheader("🔐 Identifique-se para aceder ao sistema")
     
     aba_login, aba_cadastro = st.tabs(["🚪 Iniciar Sessão", "📝 Criar Nova Conta"])
@@ -245,8 +279,6 @@ if not st.session_state.autenticado:
         cad_nome = st.text_input("Nome Completo:")
         cad_email = st.text_input("E-mail de Acesso:")
         cad_senha = st.text_input("Defina uma Senha:", type="password")
-        
-        # 🛡️ SEGURANÇA MÁXIMA: "Administrador(a)" removido. Cadastro de admin apenas direto na Planilha Google.
         cad_perfil = st.selectbox("Perfil/Cargo:", ["Bibliotecário(a)", "Residente Médico", "Estudante de Medicina"])
         
         if st.button("Finalizar Cadastro", use_container_width=True):
@@ -261,15 +293,19 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =====================================================================
-# 📊 INTERFACE PRINCIPAL DO APPLICATIVO (APÓS LOGIN ATIVO)
+# 📊 INTERFACE PRINCIPAL DO APPLICATIVO (SESSÃO ATIVA)
 # =====================================================================
 
-# --- BARRA LATERAL (SIDEBAR) ---
+# --- BARRA LATERAL (SIDEBAR - TELA À ESQUERDA) ---
+try:
+    st.sidebar.image("bibliokhan.png", use_container_width=True)
+except:
+    pass
+
 st.sidebar.markdown(f"### 👤 Sessão Ativa")
 st.sidebar.markdown(f"**Olá, {st.session_state.user_nome}!**")
 st.sidebar.markdown(f"**Cargo:** {st.session_state.user_perfil}")
 
-# Alerta visual de bloqueio ou liberação de créditos
 if st.session_state.user_creditos > 0:
     st.sidebar.success(f"🪙 **Créditos:** {st.session_state.user_creditos} fichas")
 else:
@@ -279,7 +315,10 @@ if st.sidebar.button("🚪 Terminar Sessão", use_container_width=True):
     st.session_state.autenticado = False
     st.rerun()
 
-st.sidebar.divider()
+# 📝 Rodapé Fixo da Barra Lateral
+st.sidebar.markdown("---")
+st.sidebar.caption("**BiblioKhan inteligência e automação para bibliotecas**")
+st.sidebar.caption("📧 *Bibliokhancontato@gmail.com*")
 
 # --- CONFIGURAÇÃO DE ABAS DINÂMICAS ---
 abas_disponiveis = ["📄 Gerar Fichas", "🪙 Comprar Fichas"]
@@ -289,10 +328,9 @@ if st.session_state.user_perfil == "Administrador(a)":
 abas = st.tabs(abas_disponiveis)
 
 # ---------------------------------------------------------------------
-# ABA 1: GERADOR DE FICHAS CATALOGRÁFICAS (COM TRAVA DE CRÉDITO DINÂMICA)
+# ABA 1: GERADOR DE FICHAS CATALOGRÁFICAS
 # ---------------------------------------------------------------------
 with abas[0]:
-    # Validação imediata de saldo
     esta_bloqueado = st.session_state.user_creditos <= 0
     if esta_bloqueado:
         st.error("⚠️ **Função Bloqueada:** O seu saldo de fichas terminou. Aceda à aba 'Comprar Fichas' para renovar o seu acesso.")
@@ -322,7 +360,6 @@ with abas[0]:
 
         colecao_serie = st.text_input("Coleção ou Série (Opcional):", disabled=esta_bloqueado)
 
-        # --- SEÇÃO DE TRABALHOS ACADÉMICOS ---
         st.write("### 🎓 Trabalho Académico (Teses e Dissertações)")
         e_trabalho_academico = st.checkbox("Esta obra é uma Tese, Dissertação ou Monografia de Residência?", disabled=esta_bloqueado)
         
@@ -380,7 +417,6 @@ with abas[0]:
                         st.rerun()
 
     with col_dir:
-        # --- SEÇÃO DE BUSCA MESH ---
         st.subheader("🔍 Assuntos e Indexação (MeSH)")
         termo_busca = st.text_input("Buscar termo no MeSH para o Assunto:", disabled=esta_bloqueado)
         
@@ -444,7 +480,6 @@ with abas[0]:
 
         st.divider()
 
-        # --- PRÉ-VISUALIZAÇÃO EM TEMPO REAL ---
         st.subheader("👁️ Pré-visualização")
         
         entrada, class_cutter, auts, lista_final = get_ficha_data(
@@ -479,11 +514,9 @@ with abas[0]:
 
         st.markdown(f"```text\n{ficha_texto}\n```")
 
-        # --- CONTROLES DO LOTE INTEGRADOS À COBRANÇA ---
         col_lote_add, col_lote_del = st.columns(2)
         
         with col_lote_add:
-            # Botão desativado se o usuário estiver bloqueado ou se o formulário não tiver o título base
             desativar_lote = esta_bloqueado or not titulo
             if st.button("➕ Adicionar ao Lote", use_container_width=True, disabled=desativar_lote):
                 with st.spinner("Consumindo 1 crédito na nuvem..."):
@@ -507,7 +540,6 @@ with abas[0]:
                 st.session_state.fichas_lote = []
                 st.rerun()
 
-        # Geração e Download do Arquivo DOCX (Baixar não consome créditos adicionais)
         if st.session_state.fichas_lote:
             doc = Document()
             for idx, f in enumerate(st.session_state.fichas_lote):
@@ -573,7 +605,7 @@ with abas[0]:
             st.download_button("📥 Baixar Fichas em Lote (.docx)", data=bio.getvalue(), file_name="lote_fichas_catalograficas.docx", use_container_width=True)
 
 # ---------------------------------------------------------------------
-# ABA 2: COMPRA DE FICHAS (TABELA EXCLUSIVA DE PACOTES AVULSOS)
+# ABA 2: COMPRA DE FICHAS
 # ---------------------------------------------------------------------
 with abas[1]:
     st.title("🪙 Central de Créditos")
@@ -633,7 +665,7 @@ with abas[1]:
                 st.warning("⚠️ Por favor, faça o upload da foto do comprovante antes de enviar.")
 
 # ---------------------------------------------------------------------
-# ABA 3: PAINEL ADMIN (SÓ EXIBIDO SE O PERFIL DO USUÁRIO FOR EXATAMENTE 'Administrador(a)')
+# ABA 3: PAINEL ADMIN
 # ---------------------------------------------------------------------
 if st.session_state.user_perfil == "Administrador(a)":
     with abas[2]:
