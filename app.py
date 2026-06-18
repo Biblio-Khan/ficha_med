@@ -494,7 +494,7 @@ with abas[0]:
                         st.session_state.fichas_lote.append({
                             "classe_nlm": classe_nlm.strip(), "classe_principal": classe_principal.strip(), 
                             "class_cutter": class_cutter, "entrada": entrada, "titulo": titulo, "autores_str": autores_str, 
-                            "cidade": city := cidade, "editora": editora, "ano": ano, "volumes_str": volumes_str, "paginas": paginas, 
+                            "cidade": cidade, "editora": editora, "ano": ano, "volumes_str": volumes_str, "paginas": paginas, 
                             "colecao_str": colecao_str, "nota_tese_str": nota_tese_str.strip(), "titulo_original_str": titulo_original_str, "isbn": isbn, "lista_final": lista_final
                         })
                         st.success(f"✨ Ficha salva! 1 Crédito deduzido. Total no lote: {len(st.session_state.fichas_lote)}")
