@@ -557,8 +557,7 @@ st.markdown(f"""```text
 ```""")
 
     col_lote_add, col_lote_del = st.columns(2)
-        
-        with col_lote_add:
+    with col_lote_add:
             desativar_lote = esta_bloqueado or not titulo
             if st.button("Adicionar ao Lote", use_container_width=True, disabled=desativar_lote):
                 with st.spinner("Processando transação de créditos..."):
