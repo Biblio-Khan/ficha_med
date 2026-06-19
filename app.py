@@ -86,6 +86,29 @@ def enviar_notificacao_telegram(nome, email, pacote):
         except:
             pass
 
+def enviar_notificacao_telegram(nome, email, pacote):
+    """ Envia um alerta ao administrador via Telegram quando uma compra é feita """
+    token = st.secrets.get("TELEGRAM_BOT_TOKEN")
+    chat_id = st.secrets.get("TELEGRAM_ADMIN_CHAT_ID")
+    if token and chat_id:
+        msg = f"🔔 *Nova Compra de Créditos!*\n\n👤 *Usuário:* {nome}\n📧 *E-mail:* {email}\n📦 *Pacote:* {pacote} Fichas\n\n📌 _Verifique o Painel Admin para realizar a homologação._"
+        try:
+            requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"}, timeout=10)
+        except:
+            pass
+
+def api_obter_produtividade(email):
+    """ Busca as linhas de produção do usuário na planilha """
+    payload = {"action": "obter_produtividade", "email": email.strip().lower()}
+    try:
+        resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
+        res_json = resp.json()
+        if res_json.get("success", False):
+            return res_json.get("data", [])
+        return []
+    except:
+        return []
+
 def cadastrar_novo_usuario(nome, email, senha, perfil):
     payload = {
         "action": "cadastro", "nome": nome.strip(), "email": email.strip().lower(),
