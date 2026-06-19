@@ -718,10 +718,7 @@ with abas[1]:
                 st.warning("Por favor, anexe o comprovante antes de prosseguir.")
 
 # ---------------------------------------------------------------------
-# ABA 3: PAINEL DE PRODUTIVIDADE (NOVA!)
-# ---------------------------------------------------------------------
-# ---------------------------------------------------------------------
-# ABA 3: PAINEL DE PRODUTIVIDADE (GRÁFICO REAL)
+# ABA 3: PAINEL DE PRODUTIVIDADE (COMPLETO)
 # ---------------------------------------------------------------------
 with abas[2]:
     st.title("📊 Painel de Produtividade")
@@ -735,41 +732,87 @@ with abas[2]:
     else:
         import pandas as pd
 
-        # 1. Converte os dados da planilha para um DataFrame do Pandas
+        # 1. Converte os dados recebidos da API para um DataFrame do Pandas
         df = pd.DataFrame(dados)
 
         # 2. Coleta todos os assuntos, quebra pelas vírgulas e limpa os espaços
         todos_assuntos = []
         for linha_assunto in df['assunto']:
             if linha_assunto and linha_assunto != "Não informado":
-                # Divide "Medicina, Cardiologia" em ['Medicina', 'Cardiologia']
                 partes = [a.strip().title() for a in str(linha_assunto).split(",") if a.strip()]
                 todos_assuntos.extend(partes)
 
-        if not todos_assuntos:
-            st.warning("Nenhum assunto detalhado foi encontrado nas suas fichas salvas até agora.")
-        else:
-            # 3. Conta a frequência de cada assunto
+        # 3. Conta a frequência de cada assunto individual
+        if todos_assuntos:
             df_contagem = pd.DataFrame(todos_assuntos, columns=["Assunto"]).value_counts().reset_index(name="Quantidade")
+        else:
+            df_contagem = pd.DataFrame()
 
-            # 4. Mostra um resumo em caixas (Cards)
-            col_card1, col_card2 = st.columns(2)
-            with col_card1:
-                st.metric("Total de Livros Processados", len(df))
-            with col_card2:
-                st.metric("Total de Assuntos Mapeados", len(df_contagem))
+        # 4. Mostra os cartões de resumo (Métricas)
+        col_card1, col_card2 = st.columns(2)
+        with col_card1:
+            st.metric("Total de Livros Processados", len(df))
+        with col_card2:
+            st.metric("Total de Assuntos Mapeados", len(df_contagem))
 
-            st.markdown("---")
+        st.markdown("---")
+        
+        # 5. Renderiza o Gráfico de Barras se houver assuntos mapeados
+        if not df_contagem.empty:
             st.write("### 🔝 Assuntos Mais Indexados nas suas Fichas")
-
-            # 5. Desenha o gráfico de barras nativo e lindo do Streamlit
             st.bar_chart(
                 data=df_contagem,
                 x="Assunto",
                 y="Quantidade",
-                color="#9B5DE5", # Usa a cor roxa padrão do seu app!
+                color="#9B5DE5", 
                 use_container_width=True
             )
+            st.markdown("---")
+
+        # 6. Histórico de Livros Processados e Opção de Download
+        st.write("### 📚 Histórico de Obras Processadas")
+        
+        # Criamos uma cópia limpa para formatar a exibição do usuário
+        df_exibicao = df.copy()
+        
+        # Renomeia as colunas internamente para o relatório ficar amigável
+        df_exibicao = df_exibicao.rename(columns={
+            "data": "Data/Hora",
+            "titulo": "Título da Obra",
+            "assunto": "Assuntos Indexados"
+        })
+        
+        # Ajusta a formatação da data para o padrão brasileiro (DD/MM/AAAA HH:MM)
+        if "Data/Hora" in df_exibicao.columns:
+            try:
+                df_exibicao["Data/Hora"] = pd.to_datetime(df_exibicao["Data/Hora"]).dt.strftime('%d/%m/%Y %H:%M')
+            except:
+                pass 
+
+        # Filtra e organiza apenas as colunas que interessam
+        colunas_relatorio = ["Data/Hora", "Título da Obra", "Assuntos Indexados"]
+        df_final = df_exibicao[colunas_relatorio]
+
+        # === BOTÃO DE DOWNLOAD ===
+        # O encoding 'utf-8-sig' e o separador ';' garantem que o Excel abra certinho no Brasil
+        csv_dados = df_final.to_csv(index=False, sep=";").encode('utf-8-sig')
+        
+        st.download_button(
+            label="📥 Baixar Relatório Completo em CSV (Excel)",
+            data=csv_dados,
+            file_name=f"produtividade_{st.session_state.user_nome.lower().replace(' ', '_')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+        
+        st.write("") # Pequeno espaçamento visual
+        
+        # Exibe a tabela visual dinâmica do Streamlit
+        st.dataframe(
+            df_final, 
+            use_container_width=True,
+            hide_index=True
+        )
 
 
 # ---------------------------------------------------------------------
