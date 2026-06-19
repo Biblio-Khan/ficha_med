@@ -382,9 +382,10 @@ with abas[0]:
         with c_pub2: editora = st.text_input("Editora/Instituição de Defesa:", disabled=esta_bloqueado)
         with c_pub3: ano = st.text_input("Ano:", disabled=esta_bloqueado)
         
-        c_desc1, c_desc2, c_desc3 = st.columns(3)
+        c_desc1, c_desc2, c_desc3, c_desc4 = st.columns(4)
         with c_desc1: volumes = st.text_input("Volume/Edição:", disabled=esta_bloqueado)
         with c_desc2: paginas = st.text_input("Páginas (Ex: 150 p.):", disabled=esta_bloqueado)
+        with c_desc3: dimensoes = st.text_input("Dimensões (Ex: 23 cm):", value="23 cm", disabled=esta_bloqueado)
         with c_desc3: isbn = st.text_input("ISBN (deixar vazio para teses):", disabled=esta_bloqueado)
         
         c_class1, c_class2 = st.columns(2)
@@ -513,40 +514,45 @@ with abas[0]:
 
         st.divider()
 
-        st.subheader("Pré-visualização")
+       st.subheader("Pré-visualização")
         
-        entrada, class_cutter, auts, lista_final = get_ficha_data(
-            titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos,
-            orientador, coorientador
-        )
+entrada, class_cutter, auts, lista_final = get_ficha_data(
+    titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos,
+    orientador, coorientador
+)
 
-        autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
-        volumes_str = f"{volumes} ; " if volumes else ""
-        titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
-        colecao_str = f" ({colecao_serie})" if colecao_serie else ""
+autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
+volumes_str = f"{volumes} ; " if volumes else ""
 
-        nota_tese_str = ""
-        if grau_academico != "Nenhum":
-            area_str = f" em {area_concentracao}" if area_concentracao.strip() else ""
-            inst_str = f" – {instituicao}" if instituicao.strip() else ""
-            nota_tese_str = f"\n             {grau_academico}{area_str}{inst_str}, {cidade}, {ano}."
+# === NOVA LINHA: Formata as dimensões para o padrão ABNT ===
+dimensoes_str = f" ; {dimensoes}" if dimensoes.strip() else ""
 
-        bloco_classificacao = []
-        if classe_nlm.strip(): bloco_classificacao.append(classe_nlm.strip())
-        if classe_principal.strip(): bloco_classificacao.append(classe_principal.strip())
-        
-        linhas_class_str = "\n".join(bloco_classificacao)
-        bloco_esquerdo_top = f"{linhas_class_str}\n{class_cutter}" if linhas_class_str else class_cutter
+titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
+colecao_str = f" ({colecao_serie})" if colecao_serie else ""
 
-        ficha_texto = f"""{bloco_esquerdo_top}       {entrada}.
+nota_tese_str = ""
+if grau_academico != "Nenhum":
+    area_str = f" em {area_concentracao}" if area_concentracao.strip() else ""
+    inst_str = f" – {instituicao}" if instituicao.strip() else ""
+    nota_tese_str = f"\n             {grau_academico}{area_str}{inst_str}, {cidade}, {ano}."
+
+bloco_classificacao = []
+if classe_nlm.strip(): bloco_classificacao.append(classe_nlm.strip())
+if classe_principal.strip(): bloco_classificacao.append(classe_principal.strip())
+
+linhas_class_str = "\n".join(bloco_classificacao)
+bloco_esquerdo_top = f"{linhas_class_str}\n{class_cutter}" if linhas_class_str else class_cutter
+
+# === ATUALIZADO: {dimensoes_str} inserido logo após {paginas} ===
+ficha_texto = f"""{bloco_esquerdo_top}       {entrada}.
              {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
-             {volumes_str}{paginas}.{colecao_str}{nota_tese_str}{titulo_original_str}
+             {volumes_str}{paginas}{dimensoes_str}.{colecao_str}{nota_tese_str}{titulo_original_str}
              ISBN {isbn if isbn else "..."}
 
              {' '.join(lista_final)}"""
 
-        # Código corrigido com aspas triplas para aceitar quebras de linha com segurança
-        st.markdown(f"""```text
+# Código corrigido com aspas triplas para aceitar quebras de linha com segurança
+st.markdown(f"""```text
 {ficha_texto}
 ```""")
 
