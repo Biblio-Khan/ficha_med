@@ -556,7 +556,7 @@ st.markdown(f"""```text
 {ficha_texto}
 ```""")
 
-        col_lote_add, col_lote_del = st.columns(2)
+    col_lote_add, col_lote_del = st.columns(2)
         
         with col_lote_add:
             desativar_lote = esta_bloqueado or not titulo
