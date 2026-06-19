@@ -720,10 +720,56 @@ with abas[1]:
 # ---------------------------------------------------------------------
 # ABA 3: PAINEL DE PRODUTIVIDADE (NOVA!)
 # ---------------------------------------------------------------------
-with abas[2]: # O número 2 agora pertence à Produtividade
+# ---------------------------------------------------------------------
+# ABA 3: PAINEL DE PRODUTIVIDADE (GRÁFICO REAL)
+# ---------------------------------------------------------------------
+with abas[2]:
     st.title("📊 Painel de Produtividade")
     st.subheader(f"Análise de Indexações de {st.session_state.user_nome}")
-    st.info("Aqui vamos carregar a planilha do Google Sheets e desenhar o gráfico com os assuntos!")
+
+    with st.spinner("Carregando dados de produtividade..."):
+        dados = api_obter_produtividade(st.session_state.user_email)
+
+    if not dados:
+        st.info("Você ainda não possui registros de fichas geradas no lote para criar o gráfico.")
+    else:
+        import pandas as pd
+
+        # 1. Converte os dados da planilha para um DataFrame do Pandas
+        df = pd.DataFrame(dados)
+
+        # 2. Coleta todos os assuntos, quebra pelas vírgulas e limpa os espaços
+        todos_assuntos = []
+        for linha_assunto in df['assunto']:
+            if linha_assunto and linha_assunto != "Não informado":
+                # Divide "Medicina, Cardiologia" em ['Medicina', 'Cardiologia']
+                partes = [a.strip().title() for a in str(linha_assunto).split(",") if a.strip()]
+                todos_assuntos.extend(partes)
+
+        if not todos_assuntos:
+            st.warning("Nenhum assunto detalhado foi encontrado nas suas fichas salvas até agora.")
+        else:
+            # 3. Conta a frequência de cada assunto
+            df_contagem = pd.DataFrame(todos_assuntos, columns=["Assunto"]).value_counts().reset_index(name="Quantidade")
+
+            # 4. Mostra um resumo em caixas (Cards)
+            col_card1, col_card2 = st.columns(2)
+            with col_card1:
+                st.metric("Total de Livros Processados", len(df))
+            with col_card2:
+                st.metric("Total de Assuntos Mapeados", len(df_contagem))
+
+            st.markdown("---")
+            st.write("### 🔝 Assuntos Mais Indexados nas suas Fichas")
+
+            # 5. Desenha o gráfico de barras nativo e lindo do Streamlit
+            st.bar_chart(
+                data=df_contagem,
+                x="Assunto",
+                y="Quantidade",
+                color="#9B5DE5", # Usa a cor roxa padrão do seu app!
+                use_container_width=True
+            )
 
 
 # ---------------------------------------------------------------------
