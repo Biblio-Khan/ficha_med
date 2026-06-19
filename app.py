@@ -97,8 +97,13 @@ def cadastrar_novo_usuario(nome, email, senha, perfil):
     except Exception as e:
         return False, f"Falha de comunicação: {e}"
 
-def subtrair_credito_nuvem(email):
-    payload = {"action": "subtrair_credito", "email": email}
+def subtrair_credito_nuvem(email, titulo="Não informado", assunto="Não informado"):
+    payload = {
+        "action": "subtrair_credito", 
+        "email": email,
+        "titulo": titulo,
+        "assunto": assunto
+    }
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
         res_json = resp.json()
