@@ -516,48 +516,49 @@ with abas[0]:
 
 st.subheader("Pré-visualização")
         
-entrada, class_cutter, auts, lista_final = get_ficha_data(
-    titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos,
-    orientador, coorientador
-)
+        entrada, class_cutter, auts, lista_final = get_ficha_data(
+            titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos,
+            orientador, coorientador
+        )
 
-autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
-volumes_str = f"{volumes} ; " if volumes else ""
+        autores_str = ', '.join(auts) if len(auts) <= 3 else (auts[0] + ' et al.' if len(auts) > 0 else '')
+        volumes_str = f"{volumes} ; " if volumes else ""
 
-# === NOVA LINHA: Formata as dimensões para o padrão ABNT ===
-dimensoes_str = f" ; {dimensoes}" if dimensoes.strip() else ""
+        # === NOVA LINHA: Formata as dimensões para o padrão ABNT ===
+        dimensoes_str = f" ; {dimensoes}" if dimensoes.strip() else ""
 
-titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
-colecao_str = f" ({colecao_serie})" if colecao_serie else ""
+        titulo_original_str = f"\n             Título original: {titulo_original}" if titulo_original else ""
+        colecao_str = f" ({colecao_serie})" if colecao_serie else ""
 
-nota_tese_str = ""
-if grau_academico != "Nenhum":
-    area_str = f" em {area_concentracao}" if area_concentracao.strip() else ""
-    inst_str = f" – {instituicao}" if instituicao.strip() else ""
-    nota_tese_str = f"\n             {grau_academico}{area_str}{inst_str}, {cidade}, {ano}."
+        nota_tese_str = ""
+        if grau_academico != "Nenhum":
+            area_str = f" em {area_concentracao}" if area_concentracao.strip() else ""
+            inst_str = f" – {instituicao}" if instituicao.strip() else ""
+            nota_tese_str = f"\n             {grau_academico}{area_str}{inst_str}, {cidade}, {ano}."
 
-bloco_classificacao = []
-if classe_nlm.strip(): bloco_classificacao.append(classe_nlm.strip())
-if classe_principal.strip(): bloco_classificacao.append(classe_principal.strip())
+        bloco_classificacao = []
+        if classe_nlm.strip(): bloco_classificacao.append(classe_nlm.strip())
+        if classe_principal.strip(): bloco_classificacao.append(classe_principal.strip())
 
-linhas_class_str = "\n".join(bloco_classificacao)
-bloco_esquerdo_top = f"{linhas_class_str}\n{class_cutter}" if linhas_class_str else class_cutter
+        linhas_class_str = "\n".join(bloco_classificacao)
+        bloco_esquerdo_top = f"{linhas_class_str}\n{class_cutter}" if linhas_class_str else class_cutter
 
-# === ATUALIZADO: {dimensoes_str} inserido logo após {paginas} ===
-ficha_texto = f"""{bloco_esquerdo_top}       {entrada}.
+        # === ATUALIZADO: {dimensoes_str} inserido logo após {paginas} ===
+        ficha_texto = f"""{bloco_esquerdo_top}       {entrada}.
              {titulo} / {autores_str}. – {cidade} : {editora}, {ano}.
              {volumes_str}{paginas}{dimensoes_str}.{colecao_str}{nota_tese_str}{titulo_original_str}
              ISBN {isbn if isbn else "..."}
 
              {' '.join(lista_final)}"""
 
-# Código corrigido com aspas triplas para aceitar quebras de linha com segurança
-st.markdown(f"""```text
+        # Código corrigido com aspas triplas para aceitar quebras de linha com segurança
+        st.markdown(f"""```text
 {ficha_texto}
 ```""")
 
-    col_lote_add, col_lote_del = st.columns(2)
-    with col_lote_add:
+        # === BLCO DOS BOTÕES COM A INDENTAÇÃO CORRIGIDA ===
+        col_lote_add, col_lote_del = st.columns(2)
+        with col_lote_add:
             desativar_lote = esta_bloqueado or not titulo
             if st.button("Adicionar ao Lote", use_container_width=True, disabled=desativar_lote):
                 with st.spinner("Processando transação de créditos..."):
