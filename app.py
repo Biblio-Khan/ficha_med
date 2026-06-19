@@ -533,7 +533,11 @@ with abas[0]:
             desativar_lote = esta_bloqueado or not titulo
             if st.button("Adicionar ao Lote", use_container_width=True, disabled=desativar_lote):
                 with st.spinner("Processando transação de créditos..."):
-                    sucesso_desconto, novos_creditos = subtrair_credito_nuvem(st.session_state.user_email)
+                    sucesso_desconto, novos_creditos = subtrair_credito_nuvem(
+                        st.session_state.user_email, 
+                        titulo=st.session_state.get('titulo_livro', 'Não informado'), 
+                        assunto=st.session_state.get('assunto_livro', 'Não informado')
+                    )
                     
                     if sucesso_desconto:
                         st.session_state.user_creditos = novos_creditos
