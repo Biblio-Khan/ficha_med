@@ -533,15 +533,15 @@ with abas[0]:
             desativar_lote = esta_bloqueado or not titulo
             if st.button("Adicionar ao Lote", use_container_width=True, disabled=desativar_lote):
                 with st.spinner("Processando transação de créditos..."):
-                   assunto_para_enviar = ", ".join(assuntos_limpos) if assuntos_limpos else "Não informado"
+                    assunto_para_enviar = ", ".join(assuntos_limpos) if assuntos_limpos else "Não informado"
 
-                   sucesso_desconto, novos_creditos = subtrair_credito_nuvem(
+                    sucesso_desconto, novos_creditos = subtrair_credito_nuvem(
                         st.session_state.user_email, 
                         titulo=titulo,                  
                         assunto=assunto_para_enviar     
                     )
                     
-                   if sucesso_desconto:
+                    if sucesso_desconto:
                         st.session_state.user_creditos = novos_creditos
                         st.session_state.fichas_lote.append({
                             "classe_nlm": classe_nlm.strip(), "classe_principal": classe_principal.strip(), 
@@ -553,7 +553,6 @@ with abas[0]:
                         st.rerun()
                     else:
                         st.error("Falha ao validar os créditos na nuvem. Ação interrompida.")
-
         with col_lote_del:
             if st.button("Limpar Todo o Lote", use_container_width=True):
                 st.session_state.fichas_lote = []
