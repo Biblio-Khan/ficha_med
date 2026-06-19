@@ -514,7 +514,7 @@ with abas[0]:
 
         st.divider()
 
-       st.subheader("Pré-visualização")
+st.subheader("Pré-visualização")
         
 entrada, class_cutter, auts, lista_final = get_ficha_data(
     titulo, st.session_state.autores, st.session_state.colaboradores, st.session_state.lista_assuntos,
