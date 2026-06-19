@@ -541,7 +541,7 @@ with abas[0]:
                         assunto=assunto_para_enviar     
                     )
                     
-                    if sucesso_desconto:
+                 if sucesso_desconto:
                         st.session_state.user_creditos = novos_creditos
                         st.session_state.fichas_lote.append({
                             "classe_nlm": classe_nlm.strip(), "classe_principal": classe_principal.strip(), 
