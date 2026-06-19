@@ -331,7 +331,7 @@ st.sidebar.caption("BiblioKhan inteligência e automação para bibliotecas")
 st.sidebar.caption("Bibliokhancontato@gmail.com")
 
 # --- CONFIGURAÇÃO DE ABAS ---
-abas_disponiveis = ["Gerar Fichas", "Comprar Fichas"]
+abas_disponiveis = ["Gerar Fichas", "Comprar Fichas", "Produtividade"]
 if st.session_state.user_perfil == "Administrador(a)":
     abas_disponiveis.append("Painel Admin")
 
@@ -695,11 +695,20 @@ with abas[1]:
                 st.warning("Por favor, anexe o comprovante antes de prosseguir.")
 
 # ---------------------------------------------------------------------
-# ABA 3: PAINEL ADMIN
+# ABA 3: PAINEL DE PRODUTIVIDADE (NOVA!)
+# ---------------------------------------------------------------------
+with abas[2]: # O número 2 agora pertence à Produtividade
+    st.title("📊 Painel de Produtividade")
+    st.subheader(f"Análise de Indexações de {st.session_state.user_nome}")
+    st.info("Aqui vamos carregar a planilha do Google Sheets e desenhar o gráfico com os assuntos!")
+
+
+# ---------------------------------------------------------------------
+# ABA 4: PAINEL ADMIN (CÓDIGO QUE VOCÊ JÁ TINHA, SÓ MUDOU O NÚMERO PARA 3)
 # ---------------------------------------------------------------------
 if st.session_state.user_perfil == "Administrador(a)":
-    with abas[2]:
-        st.title("Painel de Aprovação de Créditos")
+    with abas[3]: # <-- Mudamos de 2 para 3 aqui!
+        st.title("Painel de Approvação de Créditos")
         st.write("Solicitações aguardando processamento:")
         
         pedidos_pendentes = api_obter_pedidos_pendentes()
