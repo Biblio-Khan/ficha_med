@@ -633,9 +633,12 @@ with abas[0]:
                 p_corpo.paragraph_format.line_spacing = 1.15
                 p_corpo.paragraph_format.left_indent = Inches(0.7) 
                 
+               #=== LÓGICA DAS DIMENSÕES ===
+                dimensoes_f_str = f" ; {dimensoes}" if dimensoes.strip() else ""
+
                 corpo_linhas = [
                     f"{f['titulo']} / {f['autores_str']}. – {f['cidade']} : {f['editora']}, {f['ano']}.",
-                    f"{f['volumes_str']}{f['paginas']}.{f['colecao_str']}"
+                    f"{f['volumes_str']}{f['paginas']}{dimensoes_f_str}.{f['colecao_str']}"
                 ]
                 if f["nota_tese_str"]:
                     corpo_linhas.append(f["nota_tese_str"])
