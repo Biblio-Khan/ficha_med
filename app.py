@@ -174,9 +174,36 @@ def traduzir_para_portugues(texto):
     except:
         return texto
 
-def formatar_entrada_autor(nome):
-    partes = nome.strip().split()
-    return f"{partes[-1].upper()}, {' '.join(partes[:-1])}" if len(partes) > 1 else nome.upper()
+def formatar_entrada_aacr2(autores, titulo_obra):
+    """
+    Formata a entrada principal da ficha seguindo a AACR2:
+    - Até 3 autores: Entrada pelo sobrenome do primeiro autor.
+    - 4 ou mais autores: Entrada direto pelo título da obra.
+    """
+    # Garante que temos uma lista de autores limpa e sem espaços vazios
+    lista_autores = [a.strip() for a in autores if a.strip()]
+    qtd_autores = len(lista_autores)
+    
+    # REGRA: 4 ou mais autores (Entrada pelo Título)
+    if qtd_autores >= 4:
+        partes_titulo = titulo_obra.strip().split()
+        if partes_titulo:
+            # Coloca apenas a primeira palavra do título em CAIXA ALTA
+            primeira_palavra = partes_titulo[0].upper()
+            resto_titulo = " ".join(partes_titulo[1:])
+            return f"{primeira_palavra} {resto_titulo}."
+        return f"{titulo_obra.upper()}."
+        
+    # REGRA: Até 3 autores (Entrada pelo primeiro autor, igual você já fazia)
+    elif qtd_autores > 0:
+        primeiro_autor = lista_autores[0]
+        partes = primeiro_autor.split()
+        if len(partes) > 1:
+            return f"{partes[-1].upper()}, {' '.join(partes[:-1])}."
+        return f"{primeiro_autor.upper()}."
+        
+    # Caso não venha nenhum autor informado
+    return f"{titulo_obra.upper()}."
 
 def remover_artigos(titulo):
     if not titulo: return ""
