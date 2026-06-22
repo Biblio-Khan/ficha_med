@@ -174,6 +174,11 @@ def traduzir_para_portugues(texto):
     except:
         return texto
 
+def formatar_entrada_autor(nome):
+    """ Mantém a compatibilidade com a função get_ficha_data """
+    partes = nome.strip().split()
+    return f"{partes[-1].upper()}, {' '.join(partes[:-1])}" if len(partes) > 1 else nome.upper()
+
 def formatar_entrada_aacr2(autores, titulo_obra):
     """
     Formata a entrada principal da ficha seguindo a AACR2:
