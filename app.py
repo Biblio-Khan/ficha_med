@@ -643,104 +643,93 @@ with abas[0]:
                 st.session_state.fichas_lote = []
                 st.rerun()
 
-        if st.session_state.fichas_lote:
-doc = Document()
-for idx, f in enumerate(st.session_state.fichas_lote):
-    table = doc.add_table(rows=1, cols=1)
-    table.style = 'Table Grid'
-    table.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    cell = table.cell(0, 0)
-    table.columns[0].width = Inches(5.3)
-    cell.width = Inches(5.3)
-    
-    p_topo = cell.paragraphs[0]
-    p_topo.paragraph_format.space_after = Pt(0)
-    p_topo.paragraph_format.line_spacing = 1.15
-    
-    classes_linhas = []
-    if f["classe_nlm"]: classes_linhas.append(f["classe_nlm"])
-    if f["classe_principal"]: classes_linhas.append(f["classe_principal"])
-    
-    if classes_linhas:
-        r_classes = p_topo.add_run("\n".join(classes_linhas))
-        r_classes.font.name = 'Arial'; r_classes.font.size = Pt(10); r_classes.bold = True
-        p_cutter_entrada = cell.add_paragraph()
-    else:
-        p_cutter_entrada = p_topo
-        
-    p_cutter_entrada.paragraph_format.space_after = Pt(0)
-    p_cutter_entrada.paragraph_format.line_spacing = 1.15
-    p_cutter_entrada.paragraph_format.tab_stops.add_tab_stop(Inches(0.7)) 
-    
-    r_cutter = p_cutter_entrada.add_run(f["class_cutter"])
-    r_cutter.font.name = 'Arial'; r_cutter.font.size = Pt(10); r_cutter.bold = True
-    p_cutter_entrada.add_run("\t") 
+       if st.session_state.fichas_lote:
+            doc = Document()
+            for idx, f in enumerate(st.session_state.fichas_lote):
+                table = doc.add_table(rows=1, cols=1)
+                table.style = 'Table Grid'
+                table.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                cell = table.cell(0, 0)
+                table.columns[0].width = Inches(5.3)
+                cell.width = Inches(5.3)
+                
+                p_topo = cell.paragraphs[0]
+                p_topo.paragraph_format.space_after = Pt(0)
+                p_topo.paragraph_format.line_spacing = 1.15
+                
+                classes_linhas = []
+                if f["classe_nlm"]: classes_linhas.append(f["classe_nlm"])
+                if f["classe_principal"]: classes_linhas.append(f["classe_principal"])
+                
+                if classes_linhas:
+                    r_classes = p_topo.add_run("\n".join(classes_linhas))
+                    r_classes.font.name = 'Arial'; r_classes.font.size = Pt(10); r_classes.bold = True
+                    p_cutter_entrada = cell.add_paragraph()
+                else:
+                    p_cutter_entrada = p_topo
+                    
+                p_cutter_entrada.paragraph_format.space_after = Pt(0)
+                p_cutter_entrada.paragraph_format.line_spacing = 1.15
+                p_cutter_entrada.paragraph_format.tab_stops.add_tab_stop(Inches(0.7)) 
+                
+                r_cutter = p_cutter_entrada.add_run(f["class_cutter"])
+                r_cutter.font.name = 'Arial'; r_cutter.font.size = Pt(10); r_cutter.bold = True
+                p_cutter_entrada.add_run("\t") 
 
-    # =========================================================
-    # APLICAÇÃO DA REGRA AACR2 NO WORD (4 OU MAIS AUTORES)
-    # =========================================================
-    # Caso sua lista de autores original venha tratada ou crua, 
-    # checamos a quantidade de elementos que foram passados.
-    lista_autores_crua = f.get('autores_originais', []) # Ajuste se o nome da chave for diferente
-    
-    # Fallback caso não tenha a lista original salva no dicionário: 
-    # Tentamos deduzir pelo texto do autores_str antigo.
-    if not lista_autores_crua and 'et al.' in f['autores_str']:
-        qtd_autores = 4
-    else:
-        qtd_autores = len(lista_autores_crua)
+                # =========================================================
+                # APLICAÇÃO DA REGRA AACR2 NO WORD (4 OU MAIS AUTORES)
+                # =========================================================
+                # Se houver 'et al.' na string tratada, significa que são 4 ou mais autores
+                if 'et al.' in f['autores_str']:
+                    # 1. A entrada principal vira o título com a primeira palavra em CAIXA ALTA
+                    partes_titulo = f['titulo'].strip().split()
+                    if partes_titulo:
+                        primeira_palavra = partes_titulo[0].upper()
+                        resto_titulo = " ".join(partes_titulo[1:])
+                        entrada_docx = f"{primeira_palavra} {resto_titulo}"
+                    else:
+                        entrada_docx = f['titulo'].upper()
+                        
+                    # 2. Ajusta de 'Autor et al.' para o padrão oficial 'Autor ... [et al.]'
+                    autores_docx_str = f['autores_str']
+                    if '...' not in autores_docx_str:
+                        autores_docx_str = autores_docx_str.replace("et al.", "... [et al.]")
+                else:
+                    # Até 3 autores mantém o comportamento normal já gerado
+                    entrada_docx = f['entrada']
+                    autores_docx_str = f['autores_str']
+                # =========================================================
+                
+                # Aplica a entrada definida pela regra da AACR2
+                r_ent = p_cutter_entrada.add_run(f"{entrada_docx}.")
+                r_ent.font.name = 'Arial'; r_ent.font.size = Pt(10)
+                
+                p_corpo = cell.add_paragraph()
+                p_corpo.paragraph_format.space_after = Pt(0)
+                p_corpo.paragraph_format.line_spacing = 1.15
+                p_corpo.paragraph_format.left_indent = Inches(0.7) 
+                
+                #=== LÓGICA DAS DIMENSÕES ===
+                dimensoes_f_str = f" ; {dimensoes}" if dimensoes.strip() else ""
 
-    if qtd_autores >= 4:
-        # Entrada principal vira o título da obra (Primeira palavra em maiúsculo)
-        partes_titulo = f['titulo'].strip().split()
-        if partes_titulo:
-            primeira_palavra = partes_titulo[0].upper()
-            resto_titulo = " ".join(partes_titulo[1:])
-            entrada_docx = f"{primeira_palavra} {resto_titulo}"
-        else:
-            entrada_docx = f['titulo'].upper()
-            
-        # Ajusta a exibição na linha de responsabilidade
-        autores_docx_str = f['autores_str'] # Mantém o que já foi processado ou força o padrão:
-        if 'et al.' in autores_docx_str and '...' not in autores_docx_str:
-            # Transforma "Autor et al." no formato padrão AACR2 "Autor ... [et al.]"
-            autores_docx_str = autores_docx_str.replace("et al.", "... [et al.]")
-    else:
-        # Até 3 autores mantém o comportamento original do dicionário
-        entrada_docx = f['entrada']
-        autores_docx_str = f['autores_str']
-    # =========================================================
-    
-    # Escreve a entrada principal corrigida no documento
-    r_ent = p_cutter_entrada.add_run(f"{entrada_docx}.")
-    r_ent.font.name = 'Arial'; r_ent.font.size = Pt(10)
-    
-    p_corpo = cell.add_paragraph()
-    p_corpo.paragraph_format.space_after = Pt(0)
-    p_corpo.paragraph_format.line_spacing = 1.15
-    p_corpo.paragraph_format.left_indent = Inches(0.7) 
-    
-    #=== LÓGICA DAS DIMENSÕES ===
-    dimensoes_f_str = f" ; {dimensoes}" if dimensoes.strip() else ""
-
-    corpo_linhas = [
-        f"{f['titulo']} / {autores_docx_str}. – {f['cidade']} : {f['editora']}, {f['ano']}.",
-        f"{f['volumes_str']}{f['paginas']}{dimensoes_f_str}.{f['colecao_str']}"
-    ]
-    if f["nota_tese_str"]:
-        corpo_linhas.append(f["nota_tese_str"])
-    if f["titulo_original_str"].strip():
-        corpo_linhas.append(f["titulo_original_str"].strip())
-        
-    corpo_linhas.append(f"ISBN {f['isbn'] if f['isbn'] else '...'}")
-    corpo_linhas.append("")
-    corpo_linhas.append(' '.join(f['lista_final']))
-    
-    r_corpo = p_corpo.add_run("\n".join(corpo_linhas))
-    r_corpo.font.name = 'Arial'; r_corpo.font.size = Pt(10)
-    
-    if idx < len(st.session_state.fichas_lote) - 1:
-        doc.add_page_break()
+                corpo_linhas = [
+                    f"{f['titulo']} / {autores_docx_str}. – {f['cidade']} : {f['editora']}, {f['ano']}.",
+                    f"{f['volumes_str']}{f['paginas']}{dimensoes_f_str}.{f['colecao_str']}"
+                ]
+                if f["nota_tese_str"]:
+                    corpo_linhas.append(f["nota_tese_str"])
+                if f["titulo_original_str"].strip():
+                    corpo_linhas.append(f["titulo_original_str"].strip())
+                    
+                corpo_linhas.append(f"ISBN {f['isbn'] if f['isbn'] else '...'}")
+                corpo_linhas.append("")
+                corpo_linhas.append(' '.join(f['lista_final']))
+                
+                r_corpo = p_corpo.add_run("\n".join(corpo_linhas))
+                r_corpo.font.name = 'Arial'; r_corpo.font.size = Pt(10)
+                
+                if idx < len(st.session_state.fichas_lote) - 1:
+                    doc.add_page_break()
                         
             bio = io.BytesIO()
             doc.save(bio)
