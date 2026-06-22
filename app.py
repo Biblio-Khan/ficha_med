@@ -643,7 +643,7 @@ with abas[0]:
                 st.session_state.fichas_lote = []
                 st.rerun()
 
-       if st.session_state.fichas_lote:
+           if st.session_state.fichas_lote:
             doc = Document()
             for idx, f in enumerate(st.session_state.fichas_lote):
                 table = doc.add_table(rows=1, cols=1)
