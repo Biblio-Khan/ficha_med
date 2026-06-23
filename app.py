@@ -421,7 +421,7 @@ with abas[0]:
         with c_desc3: isbn = st.text_input("ISBN (deixar vazio para teses):", disabled=esta_bloqueado)
         
         c_class1, c_class2 = st.columns(2)
-        with c_class1: classe_principal = st.text_input("Classe Principal DDC/CDU (Ex: 610):", disabled=esta_bloqueado)
+        with c_class1: classe_principal = st.text_input("Classe Principal CDD/CDU (Ex: 610):", disabled=esta_bloqueado)
         with c_class2: classe_nlm = st.text_input("Classificação NLM (Ex: WG 140):", disabled=esta_bloqueado)
 
         colecao_serie = st.text_input("Coleção ou Série (Opcional):", disabled=esta_bloqueado)
