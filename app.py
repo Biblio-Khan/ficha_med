@@ -566,7 +566,7 @@ with abas[0]:
         st.write("### Adição Manual de Assunto")
         with st.form("form_assunto_manual", clear_on_submit=True):
             assunto_manual = st.text_input("Digite o termo:")
-            if st.form_submit_button("Adicionar manualmente"):
+            if st.form_submit_button("Adicionar"):
                 if assunto_manual and assunto_manual.strip():
                     termo_formatado = assunto_manual.strip().capitalize()
                     if termo_formatado not in st.session_state.lista_assuntos:
