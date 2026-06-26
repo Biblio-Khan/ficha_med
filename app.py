@@ -302,22 +302,34 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos, orientador=""
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
 def gerar_marc21_lote(lista_fichas):
-    """Concatena todas as fichas do lote em formato MARC21."""
+    """Concatena todas as fichas do lote em formato MARC21 com suporte a teses."""
     resultado_final = []
     for f in lista_fichas:
-        # Repete a lógica de campos para cada ficha no lote
+        # Monta a base das linhas
         marc_lines = [
             "000 00000nam a2200000 i 4500",
             f"020 ##$a{f.get('isbn', '')}",
             f"100 1#$a{f.get('entrada', '').replace('.', '')}",
             f"245 10$a{f.get('titulo', '')} / $c{f.get('autores_str', '')}.",
             f"260 ##$a{f.get('cidade', 'S.l.')} : $b{f.get('editora', 's.n.')}, $c{f.get('ano', '0000')}.",
-            f"300 ##$a{f.get('paginas', '0 p.')}",
-            f"650 #4$a{str(f.get('lista_final', ['Geral'])[0])}"
+            f"300 ##$a{f.get('paginas', '0 p.')}"
         ]
+        
+        # Lógica para Tese/Dissertação (Adiciona a tag 502)
+        # Verificamos se o campo 'tipo' ou 'grau' existe no dicionário da ficha
+        tipo = f.get('tipo', '') # Ex: "Tese", "Dissertação"
+        if tipo in ["Tese", "Dissertação"]:
+            inst = f.get('instituicao', 'Instituição não informada')
+            area = f.get('area', 'Área não informada')
+            ano = f.get('ano', '0000')
+            marc_lines.append(f"502 ##$a{tipo} ({area}) - {inst}, {ano}.")
+
+        # Adiciona o assunto por último
+        marc_lines.append(f"650 #4$a{str(f.get('lista_final', ['Geral'])[0])}")
+        
         resultado_final.append("\n".join(marc_lines))
     
-    return "\n\n".join(resultado_final) # Separa cada ficha por uma linha em branco
+    return "\n\n".join(resultado_final)
 
 # =====================================================================
 # TELA DE LOGIN / CADASTRO
