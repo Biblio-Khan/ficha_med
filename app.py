@@ -563,6 +563,19 @@ with abas[0]:
                         st.rerun()
 
         st.divider()
+        st.write("### Adição Manual de Assunto")
+        with st.form("form_assunto_manual", clear_on_submit=True):
+            assunto_manual = st.text_input("Digite o termo que não está no MeSH:")
+            if st.form_submit_button("Adicionar manualmente"):
+                if assunto_manual and assunto_manual.strip():
+                    termo_formatado = assunto_manual.strip().capitalize()
+                    if termo_formatado not in st.session_state.lista_assuntos:
+                        st.session_state.lista_assuntos.append(termo_formatado)
+                        st.rerun()
+                    else:
+                        st.warning("Este termo já consta na lista.")
+                else:
+                    st.error("O campo de assunto não pode estar vazio.")
 
         st.subheader("Pré-visualização")
         
