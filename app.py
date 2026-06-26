@@ -565,7 +565,7 @@ with abas[0]:
         st.divider()
         st.write("### Adição Manual de Assunto")
         with st.form("form_assunto_manual", clear_on_submit=True):
-            assunto_manual = st.text_input("Digite o termo que não está no MeSH:")
+            assunto_manual = st.text_input("Digite o termo:")
             if st.form_submit_button("Adicionar manualmente"):
                 if assunto_manual and assunto_manual.strip():
                     termo_formatado = assunto_manual.strip().capitalize()
