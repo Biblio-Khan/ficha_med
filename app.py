@@ -302,33 +302,33 @@ def get_ficha_data(titulo, autores, colaboradores, lista_assuntos, orientador=""
     return entrada, classificacao_cutter, autores_v, assuntos + entradas
 
 def gerar_marc21_lote(lista_fichas):
-    """Concatena todas as fichas do lote em formato MARC21 com suporte a teses."""
+    """Concatena todas as fichas do lote em formato MARC21 compatível com MarcEdit."""
     resultado_final = []
     for f in lista_fichas:
-        # Monta a base das linhas
+        # Adicionamos o '=' no início de cada linha, que é o padrão que o MarcEdit exige
         marc_lines = [
-            "000 00000nam a2200000 i 4500",
-            f"020 ##$a{f.get('isbn', '')}",
-            f"100 1#$a{f.get('entrada', '').replace('.', '')}",
-            f"245 10$a{f.get('titulo', '')} / $c{f.get('autores_str', '')}.",
-            f"260 ##$a{f.get('cidade', 'S.l.')} : $b{f.get('editora', 's.n.')}, $c{f.get('ano', '0000')}.",
-            f"300 ##$a{f.get('paginas', '0 p.')}"
+            "=000  00000nam a2200000 i 4500",
+            f"=020  ##$a{f.get('isbn', '')}",
+            f"=100  1#$a{f.get('entrada', '').replace('.', '')}",
+            f"=245  10$a{f.get('titulo', '')} / $c{f.get('autores_str', '')}.",
+            f"=260  ##$a{f.get('cidade', 'S.l.')} : $b{f.get('editora', 's.n.')}, $c{f.get('ano', '0000')}.",
+            f"=300  ##$a{f.get('paginas', '0 p.')}"
         ]
         
-        # Lógica para Tese/Dissertação (Adiciona a tag 502)
-        # Verificamos se o campo 'tipo' ou 'grau' existe no dicionário da ficha
-        tipo = f.get('tipo', '') # Ex: "Tese", "Dissertação"
+        # Lógica para Tese/Dissertação
+        tipo = f.get('tipo', '')
         if tipo in ["Tese", "Dissertação"]:
             inst = f.get('instituicao', 'Instituição não informada')
             area = f.get('area', 'Área não informada')
             ano = f.get('ano', '0000')
-            marc_lines.append(f"502 ##$a{tipo} ({area}) - {inst}, {ano}.")
+            marc_lines.append(f"=502  ##$a{tipo} ({area}) - {inst}, {ano}.")
 
-        # Adiciona o assunto por último
-        marc_lines.append(f"650 #4$a{str(f.get('lista_final', ['Geral'])[0])}")
+        # Adiciona o assunto
+        marc_lines.append(f"=650  #4$a{str(f.get('lista_final', ['Geral'])[0])}")
         
         resultado_final.append("\n".join(marc_lines))
     
+    # O MarcEdit prefere que cada registro seja separado por uma linha vazia
     return "\n\n".join(resultado_final)
 
 # =====================================================================
