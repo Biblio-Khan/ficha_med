@@ -695,17 +695,21 @@ with abas[0]:
         if st.session_state.fichas_lote:
             st.write("---")
             marc_conteudo_lote = gerar_marc21_lote(st.session_state.fichas_lote)
+            
+            # --- CORREÇÃO: Defina as colunas AQUI antes de usá-las ---
             col1, col2 = st.columns(2)
-
-        with col1:
-            st.download_button(
-                label=f"📥 Exportar {len(st.session_state.fichas_lote)} fichas em MARC 21 (.mrc)",
-                data=marc_conteudo_lote,
-                file_name="lote_fichas_marc21.mrc",
-                mime="text/plain"
-            )
-        with col2:
-                # Botão para o arquivo .txt (fácil de copiar/colar)
+            
+            with col1:
+                # Botão para o arquivo .mrc
+                st.download_button(
+                    label=f"📥 Baixar .mrc",
+                    data=marc_conteudo_lote,
+                    file_name="lote_fichas_marc21.mrc",
+                    mime="text/plain"
+                )
+            
+            with col2:
+                # Botão para o arquivo .txt
                 st.download_button(
                     label="📋 Baixar .txt para copiar",
                     data=marc_conteudo_lote,
