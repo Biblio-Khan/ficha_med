@@ -706,7 +706,7 @@ with abas[0]:
             )
         with col2:
             st.download_button(
-                label = "Baixar Marc em txt)
+                label = "Baixar Marc em txt"
                 data=marc_conteudo_lote,
                 file_name="lote_fichas_marc21.txt),
                 mime="text/plain"
