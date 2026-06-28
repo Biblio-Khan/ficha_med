@@ -705,12 +705,13 @@ with abas[0]:
                 mime="text/plain"
             )
         with col2:
-            st.download_button(
-                label = "Baixar .txt para copiar"
-                data=marc_conteudo_lote,
-                file_name="lote_fichas_marc21.txt",
-                mime="text/plain"
-            )
+                # Botão para o arquivo .txt (fácil de copiar/colar)
+                st.download_button(
+                    label="📋 Baixar .txt para copiar",
+                    data=marc_conteudo_lote,
+                    file_name="lote_fichas_marc21.txt",
+                    mime="text/plain"
+                )
         if st.session_state.fichas_lote:
             doc = Document()
             for idx, f in enumerate(st.session_state.fichas_lote):
