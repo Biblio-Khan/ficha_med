@@ -12,4 +12,4 @@ jobs:
     steps:
       - name: Send GET request to app
         run: |
-          curl -I https://seu-app-no-streamlit.streamlit.app/
+          curl -I https://fichamed-bqv4gcqwzlzmahbempvxsn.streamlit.app/
