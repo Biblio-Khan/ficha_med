@@ -386,7 +386,7 @@ if not st.session_state.autenticado:
                     st.error(msg)
             else:
                 st.warning("Todos os campos são obrigatórios.")
-    st.stop()
+    
 
     with aba_recuperar:
         st.subheader("Recuperar Acesso")
