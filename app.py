@@ -69,10 +69,12 @@ def validar_credenciais(email, senha):
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
         res_json = resp.json()
+        
         if res_json.get("success", False):
+            # Agora capturamos os 6 campos
             return True, res_json.get("nome"), res_json.get("perfil"), res_json.get("creditos", 0)
         return False, None, None, 0
-    except:
+    except Exception as e:
         return False, None, None, 0
 
 def enviar_notificacao_telegram(nome, email, pacote):
