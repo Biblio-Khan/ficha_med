@@ -389,8 +389,8 @@ if not st.session_state.autenticado:
     st.stop()
 
     with aba_recuperar:
-    st.info("Digite seu e-mail para receber um código de redefinição.")
-    rec_email = st.text_input("E-mail cadastrado:", key="rec_email")
+        st.info("Digite seu e-mail para receber um código de redefinição.")
+        rec_email = st.text_input("E-mail cadastrado:", key="rec_email")
     
     if st.button("Enviar Código de Recuperação"):
         # Aqui o Streamlit chama a função 'pedir_codigo' que já existe no seu Script
