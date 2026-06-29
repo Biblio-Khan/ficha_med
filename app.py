@@ -419,23 +419,23 @@ if not st.session_state.autenticado:
             nova_senha = st.text_input("Nova senha:", type="password", key="rec_nova_senha")
             
             if st.button("Confirmar Redefinição"):
-            # 1. Vamos ver se o Streamlit está lendo a URL corretamente
-            st.write(f"URL usada: {URL_API_GOOGLE}") 
+                # 1. Vamos ver se o Streamlit está lendo a URL corretamente
+                st.write(f"URL usada: {URL_API_GOOGLE}") 
             
-            payload = {
-                "action": "confirmar_troca", 
-                "email": st.session_state.email_recuperacao, 
-                "codigo": cod_input, 
-                "nova_senha": nova_senha
-            }
+                payload = {
+                    "action": "confirmar_troca", 
+                    "email": st.session_state.email_recuperacao, 
+                    "codigo": cod_input, 
+                    "nova_senha": nova_senha
+                }
             
-            # 2. Vamos tentar enviar e mostrar o que acontece na tela
-            try:
-                response_raw = requests.post(URL_API_GOOGLE, json=payload, timeout=10)
-                st.write(f"Status do Pedido: {response_raw.status_code}")
-                st.write(f"Resposta bruta: {response_raw.text}")
-            except Exception as e:
-                st.error(f"O Streamlit não conseguiu nem conectar: {e}")
+                # 2. Vamos tentar enviar e mostrar o que acontece na tela
+                try:
+                    response_raw = requests.post(URL_API_GOOGLE, json=payload, timeout=10)
+                    st.write(f"Status do Pedido: {response_raw.status_code}")
+                    st.write(f"Resposta bruta: {response_raw.text}")
+                except Exception as e:
+                    st.error(f"O Streamlit não conseguiu nem conectar: {e}")
         
     st.stop()
 # =====================================================================
