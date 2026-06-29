@@ -418,12 +418,21 @@ if not st.session_state.autenticado:
                     "codigo": cod_input, 
                     "nova_senha": nova_senha
                 }
-                res = requests.post(URL_API_GOOGLE, json=payload).json()
+                # No seu app.py, onde faz o post da troca de senha:
+        response_raw = requests.post(URL_API_GOOGLE, json=payload)
+        
+        # DEBUG: Se der erro, isso vai mostrar o que está vindo do Google
+        if response_raw.status_code != 200:
+            st.error(f"Erro de conexão: {response_raw.status_code}")
+            st.write(response_raw.text) 
+        else:
+            try:
+                res = response_raw.json()
                 if res.get("success"):
-                    st.success("Senha alterada com sucesso! Você já pode entrar.")
-                    del st.session_state.email_recuperacao # Limpa a memória
-                else:
-                    st.error("Código inválido ou incorreto.")
+                    st.success("Senha alterada!")
+            except:
+                st.error("Erro ao ler JSON. Resposta do Google:")
+                st.write(response_raw.text) # <--- ISSO VAI MOSTRAR O ERRO
         
     st.stop()
 # =====================================================================
