@@ -396,7 +396,7 @@ if not st.session_state.autenticado:
     
         if st.button("Enviar Código de Recuperação"):
             # Chamada ao seu script unificado
-            response = requests.post(URL, json={"action": "pedir_codigo", "email": rec_email}).json()
+            response = requests.post(URL_API_GOOGLE, json={"action": "pedir_codigo", "email": rec_email}).json()
             if response.get("success"):
                 st.success("Código enviado! Verifique seu e-mail.")
                 st.session_state.email_recuperacao = rec_email # Guarda o email na memória
@@ -418,7 +418,7 @@ if not st.session_state.autenticado:
                     "codigo": cod_input, 
                     "nova_senha": nova_senha
                 }
-                res = requests.post(URL, json=payload).json()
+                res = requests.post(URL_API_GOOGLE, json=payload).json()
                 if res.get("success"):
                     st.success("Senha alterada com sucesso! Você já pode entrar.")
                     del st.session_state.email_recuperacao # Limpa a memória
