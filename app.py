@@ -424,7 +424,8 @@ if not st.session_state.autenticado:
                     del st.session_state.email_recuperacao # Limpa a memória
                 else:
                     st.error("Código inválido ou incorreto.")
-
+        
+    st.stop()
 # =====================================================================
 # INTERFACE PRINCIPAL DO APLICATIVO (SESSÃO ATIVA)
 # =====================================================================
