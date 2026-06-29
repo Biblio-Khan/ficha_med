@@ -826,12 +826,12 @@ with abas[1]:
         st.markdown("### Pacotes Avulsos")
         st.info("""
         Tabela de valores para recarga de saldo no system:
-        * **20 Fichas:** R$ 55,00
-        * **30 Fichas:** R$ 80,00
-        * **100 Fichas:** R$ 240,00
-        * **300 Fichas:** R$ 660,00
-        * **600 Fichas:** R$ 1.200,00
-        * **800 Fichas:** R$ 1.440,00
+        * **20 Fichas:** R$ 70,00
+        * **30 Fichas:** R$ 105,00
+        * **100 Fichas:** R$ 300,00
+        * **300 Fichas:** R$ 840,00
+        * **600 Fichas:** R$ 1.560,00
+        * **800 Fichas:** R$ 2.000,00
         
         ---
         Chave PIX para transferência:
@@ -842,12 +842,12 @@ with abas[1]:
         st.markdown("### Enviar Comprovante")
         
         opcoes_pacotes = {
-            20: "20 Fichas — R$ 55,00",
-            30: "30 Fichas — R$ 80,00",
-            100: "100 Fichas — R$ 240,00",
-            300: "300 Fichas — R$ 660,00",
-            600: "600 Fichas — R$ 1.200,00",
-            800: "800 Fichas — R$ 1.440,00"
+            20: "20 Fichas — R$ 70,00",
+            30: "30 Fichas — R$ 105,00",
+            100: "100 Fichas — R$ 300,00",
+            300: "300 Fichas — R$ 840,00",
+            600: "600 Fichas — R$ 1.560,00",
+            800: "800 Fichas — R$ 2.000,00"
         }
         
         pacote_qtd = st.selectbox(
