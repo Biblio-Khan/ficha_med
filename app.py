@@ -391,28 +391,56 @@ if not st.session_state.autenticado:
     with aba_recuperar:
         st.subheader("Recuperar Acesso")
         st.info("Insira seu e-mail para receber um código de validação.")
-    
-        rec_email = st.text_input("E-mail de cadastro:", key="rec_email_input")
-    
-        if st.button("Enviar Código de Recuperação"):
-        # Chamada ao script
-        response_raw = requests.post(URL_API_GOOGLE, json={"action": "pedir_codigo", "email": rec_email})
         
-        # DEBUG: Vamos ver o que o Google respondeu
-        if response_raw.status_code == 200:
-            try:
-                response = response_raw.json()
-                if response.get("success"):
-                    st.success("Código enviado! Verifique seu e-mail.")
-                    st.session_state.email_recuperacao = rec_email
+        rec_email = st.text_input("E-mail de cadastro:", key="rec_email_input")
+        
+        # FLUXO 1: Enviar código
+        if st.button("Enviar Código de Recuperação"):
+            response_raw = requests.post(URL_API_GOOGLE, json={"action": "pedir_codigo", "email": rec_email})
+            if response_raw.status_code == 200:
+                try:
+                    response = response_raw.json()
+                    if response.get("success"):
+                        st.success("Código enviado! Verifique seu e-mail.")
+                        st.session_state.email_recuperacao = rec_email
+                    else:
+                        st.error("E-mail não encontrado.")
+                except:
+                    st.error("Erro ao processar resposta do servidor.")
+            else:
+                st.error("Erro de conexão com o Google.")
+
+        # FLUXO 2: Digitar código e nova senha (só aparece se o email for validado)
+        if 'email_recuperacao' in st.session_state:
+            st.divider()
+            st.write("Agora, digite o código que recebeu e a sua nova senha:")
+            
+            cod_input = st.text_input("Código recebido:", key="rec_codigo")
+            nova_senha = st.text_input("Nova senha:", type="password", key="rec_nova_senha")
+            
+            if st.button("Confirmar Redefinição"):
+                payload = {
+                    "action": "confirmar_troca", 
+                    "email": st.session_state.email_recuperacao, 
+                    "codigo": cod_input, 
+                    "nova_senha": nova_senha
+                }
+                
+                response_raw = requests.post(URL_API_GOOGLE, json=payload)
+                
+                if response_raw.status_code == 200:
+                    try:
+                        res = response_raw.json()
+                        if res.get("success"):
+                            st.success("Senha alterada com sucesso! Você já pode fazer login.")
+                            # Limpa o estado para esconder o formulário
+                            del st.session_state.email_recuperacao
+                        else:
+                            st.error("Código inválido ou incorreto.")
+                    except:
+                        st.error("Erro ao processar resposta do servidor.")
                 else:
-                    st.error("O Script respondeu, mas deu 'false'. Verifique se o e-mail existe na planilha.")
-            except:
-                st.error("Erro: O servidor não retornou um JSON válido.")
-                st.write("Resposta bruta:", response_raw.text)
-        else:
-            st.error(f"Erro de conexão com o Google. Código: {response_raw.status_code}")
-            st.write("Resposta bruta:", response_raw.text)
+                    st.error("Erro de conexão com o servidor.")
             
         
     st.stop()
