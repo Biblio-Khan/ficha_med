@@ -341,7 +341,7 @@ if not st.session_state.autenticado:
         st.text("")
         
     st.title("BiblioKhan Médicas")
-    st.markdown("### BiblioKhan inteligência e automação para bibliotecas")
+    st.markdown("### inteligência e automação para bibliotecas")
     st.caption("Contato de Suporte: Bibliokhancontato@gmail.com")
         
     st.divider()
