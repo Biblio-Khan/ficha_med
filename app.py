@@ -419,29 +419,23 @@ if not st.session_state.autenticado:
             nova_senha = st.text_input("Nova senha:", type="password", key="rec_nova_senha")
             
             if st.button("Confirmar Redefinição"):
-                payload = {
-                    "action": "confirmar_troca", 
-                    "email": st.session_state.email_recuperacao, 
-                    "codigo": cod_input, 
-                    "nova_senha": nova_senha
-                }
-                
-                response_raw = requests.post(URL_API_GOOGLE, json=payload)
-                
-                if response_raw.status_code == 200:
-                    try:
-                        res = response_raw.json()
-                        if res.get("success"):
-                            st.success("Senha alterada com sucesso! Você já pode fazer login.")
-                            # Limpa o estado para esconder o formulário
-                            del st.session_state.email_recuperacao
-                        else:
-                            st.error("Código inválido ou incorreto.")
-                    except:
-                        st.error("Erro ao processar resposta do servidor.")
-                else:
-                    st.error("Erro de conexão com o servidor.")
+            # 1. Vamos ver se o Streamlit está lendo a URL corretamente
+            st.write(f"URL usada: {URL_API_GOOGLE}") 
             
+            payload = {
+                "action": "confirmar_troca", 
+                "email": st.session_state.email_recuperacao, 
+                "codigo": cod_input, 
+                "nova_senha": nova_senha
+            }
+            
+            # 2. Vamos tentar enviar e mostrar o que acontece na tela
+            try:
+                response_raw = requests.post(URL_API_GOOGLE, json=payload, timeout=10)
+                st.write(f"Status do Pedido: {response_raw.status_code}")
+                st.write(f"Resposta bruta: {response_raw.text}")
+            except Exception as e:
+                st.error(f"O Streamlit não conseguiu nem conectar: {e}")
         
     st.stop()
 # =====================================================================
