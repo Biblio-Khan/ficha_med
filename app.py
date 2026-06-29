@@ -389,39 +389,41 @@ if not st.session_state.autenticado:
     st.stop()
 
     with aba_recuperar:
-        st.info("Digite seu e-mail para receber um código de redefinição.")
-        rec_email = st.text_input("E-mail cadastrado:", key="rec_email")
+        st.subheader("Recuperar Acesso")
+        st.info("Insira seu e-mail para receber um código de validação.")
     
-    if st.button("Enviar Código de Recuperação"):
-        # Aqui o Streamlit chama a função 'pedir_codigo' que já existe no seu Script
-        response = requests.post(URL, json={"action": "pedir_codigo", "email": rec_email}).json()
-        if response.get("success"):
-            st.success("Código enviado! Verifique sua caixa de entrada.")
-            st.session_state.email_recuperacao = rec_email
-        else:
-            st.error("E-mail não encontrado na nossa base.")
-
-    if 'email_recuperacao' in st.session_state:
-        st.divider()
-        st.subheader("Redefinir Senha")
-        cod_input = st.text_input("Código recebido no e-mail:")
-        nova_senha = st.text_input("Nova senha:", type="password")
-        
-        if st.button("Confirmar Nova Senha"):
-            payload = {
-                "action": "confirmar_troca", 
-                "email": st.session_state.email_recuperacao, 
-                "codigo": cod_input, 
-                "nova_senha": nova_senha
-            }
-            # Aqui o Streamlit chama a função 'confirmar_troca' que já existe no seu Script
-            res = requests.post(URL, json=payload).json()
-            if res.get("success"):
-                st.success("Senha atualizada! Agora você pode fazer login.")
-                # Limpa a sessão para não mostrar o formulário de novo
-                del st.session_state.email_recuperacao 
+        rec_email = st.text_input("E-mail de cadastro:", key="rec_email_input")
+    
+        if st.button("Enviar Código de Recuperação"):
+            # Chamada ao seu script unificado
+            response = requests.post(URL, json={"action": "pedir_codigo", "email": rec_email}).json()
+            if response.get("success"):
+                st.success("Código enviado! Verifique seu e-mail.")
+                st.session_state.email_recuperacao = rec_email # Guarda o email na memória
             else:
-                st.error("Código inválido ou erro na troca.")
+                st.error("E-mail não encontrado ou erro no servidor.")
+
+    # Só mostra os campos de troca se o código foi pedido com sucesso
+        if 'email_recuperacao' in st.session_state:
+            st.divider()
+            st.write("Agora, digite o código que recebeu e a sua nova senha:")
+        
+            cod_input = st.text_input("Código recebido:", key="rec_codigo")
+            nova_senha = st.text_input("Nova senha:", type="password", key="rec_nova_senha")
+        
+            if st.button("Confirmar Redefinição"):
+                payload = {
+                    "action": "confirmar_troca", 
+                    "email": st.session_state.email_recuperacao, 
+                    "codigo": cod_input, 
+                    "nova_senha": nova_senha
+                }
+                res = requests.post(URL, json=payload).json()
+                if res.get("success"):
+                    st.success("Senha alterada com sucesso! Você já pode entrar.")
+                    del st.session_state.email_recuperacao # Limpa a memória
+                else:
+                    st.error("Código inválido ou incorreto.")
 
 # =====================================================================
 # INTERFACE PRINCIPAL DO APLICATIVO (SESSÃO ATIVA)
