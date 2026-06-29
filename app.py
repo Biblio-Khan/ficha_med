@@ -65,7 +65,7 @@ def hash_senha(senha):
     return hashlib.sha256(senha.encode()).hexdigest()
 
 def validar_credenciais(email, senha):
-    payload = {"action": "login", "email": email.strip().lower(), "senha": senha)}
+    payload = {"action": "login", "email": email.strip().lower(), "senha": senha}
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
         res_json = resp.json()
