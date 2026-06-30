@@ -1059,7 +1059,7 @@ if st.session_state.user_perfil == "Administrador(a)":
                                     # 3. Use a variável id_pedido já verificada
                                     if aprovar_pedido_nuvem(id_pedido):
                                        st.success("Créditos liberados com sucesso.")
-                                        st.rerun()
+                                       st.rerun()
                                     else:
                                         st.error("Erro ao tentar atualizar o saldo.")
                         
