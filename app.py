@@ -1049,17 +1049,13 @@ if st.session_state.user_perfil == "Administrador(a)":
                         st.markdown(f"[Visualizar Imagem do Comprovante]({ped.get('url', '#')})")
                     
                     with col2:
-                        # Supondo que você esteja usando um loop como: for i, ped in enumerate(lista_de_pedidos):
-
-                        # Use o 'i' (índice) para garantir que a chave seja única
-                        id_pedido = ped.get('id_pedido', 'sem_id')
-
-                        # Adicionamos o i na key: key=f"btn_{id_pedido}_{i}"
-                        if st.button(f"Aprovar Créditos", key=f"btn_{id_pedido}_{i}", use_container_width=True):
-                        # Lógica de aprovação aqui
-                            with st.spinner("Atualizando registros no banco de dados..."):
-                                if aprovar_pedido_nuvem(ped['id_pedido']):
+                        id_pedido = ped.get('id_pedido')
+                        if id_pedido:
+                            if st.button(f"Aprovar Créditos", key=f"btn_{id_pedido}_{i}", use_container_width=True):
+                                with st.spinner("Atualizando registros no banco de dados..."):
+                                    if aprovar_pedido_nuvem('id_pedido'):
                                     st.success("Créditos liberados com sucesso.")
                                     st.rerun()
                                 else:
                                     st.error("Erro ao tentar atualizar o saldo.")
+                        
