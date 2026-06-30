@@ -1044,6 +1044,7 @@ if st.session_state.user_perfil == "Administrador(a)":
                     col1, col2 = st.columns([2, 1])
                     with col1:
                         st.markdown(f"**Pedido:** `{ped['id_pedido']}` | **Data:** {ped['data']}")
+                        st.write("DEBUG: Conteúdo do objeto 'ped':", ped) # Adicione esta linha
                         st.markdown(f"**Usuário:** {ped['nome']} ({ped['email']})")
                         st.markdown(f"**Volume Solicitado:** `{ped['pacote']}` Fichas")
                         st.markdown(f"[Visualizar Imagem do Comprovante]({ped['url']})")
