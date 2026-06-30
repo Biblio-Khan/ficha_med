@@ -1031,7 +1031,7 @@ with abas[2]:
 # ---------------------------------------------------------------------
 if st.session_state.user_perfil == "Administrador(a)":
     with abas[3]: # <-- Mudamos de 2 para 3 aqui!
-        st.title("Painel de Approvação de Créditos")
+        st.title("Painel de Aprovação de Créditos")
         st.write("Solicitações aguardando processamento:")
         
         pedidos_pendentes = api_obter_pedidos_pendentes()
@@ -1049,17 +1049,15 @@ if st.session_state.user_perfil == "Administrador(a)":
                         st.markdown(f"[Visualizar Imagem do Comprovante]({ped.get('url', '#')})")
                     
                     with col2:
-                        # 1. Obtenha o ID de forma segura
-                        id_pedido = ped.get('id_pedido') 
+                        # Tentamos pegar o ID de várias formas possíveis (id_pedido, ID, id)
+                        id_pedido = ped.get('id_pedido') or ped.get('id') or ped.get('ID') or "sem_id"
     
-                        # 2. Se o ID for None ou vazio, não renderize o botão (evita botões quebrados)
-                        if id_pedido:
-                            if st.button(f"Aprovar Créditos", key=f"btn_{id_pedido}_{i}", use_container_width=True):
-                                with st.spinner("Atualizando registros no banco de dados..."):
-                                    # 3. Use a variável id_pedido já verificada
-                                    if aprovar_pedido_nuvem(id_pedido):
-                                       st.success("Créditos liberados com sucesso.")
-                                       st.rerun()
-                                    else:
-                                        st.error("Erro ao tentar atualizar o saldo.")
+                        # Adicionamos o i na key para garantir que seja única sempre
+                        if st.button(f"Aprovar ({id_pedido})", key=f"btn_{id_pedido}_{i}"):
+                            with st.spinner("Atualizando..."):
+                                if aprovar_pedido_nuvem(id_pedido):
+                                    st.success("Sucesso!")
+                                    st.rerun()
+                                else:
+                                    st.error("Erro na API.")
                         
