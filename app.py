@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import requests
 import io
-import hashlib
 import base64
 from datetime import datetime, timedelta, timezone
 from docx import Document
@@ -61,21 +60,19 @@ except KeyError:
 # =====================================================================
 # FUNÇÕES DO SISTEMA DE CRÉDITOS E AUTENTICAÇÃO
 # =====================================================================
-def hash_senha(senha):
-    return hashlib.sha256(senha.encode()).hexdigest()
-
 def validar_credenciais(email, senha):
+    # Enviamos a senha limpa. 
+    # O Google Apps Script vai receber, aplicar o SALT, gerar o HASH e comparar com a planilha.
     payload = {"action": "login", "email": email.strip().lower(), "senha": senha}
+    
     try:
         resp = requests.post(URL_API_GOOGLE, json=payload, timeout=15)
         res_json = resp.json()
         
         if res_json.get("success", False):
-            # Agora capturamos os 6 campos
             return True, res_json.get("nome"), res_json.get("perfil"), res_json.get("creditos", 0)
         return False, None, None, 0
     except Exception as e:
-        # Imprima o erro para sabermos o que está acontecendo
         print(f"Erro na comunicação: {e}")
         return False, None, None, 0
 
