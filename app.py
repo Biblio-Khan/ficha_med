@@ -1050,7 +1050,9 @@ if st.session_state.user_perfil == "Administrador(a)":
                     
                     with col2:
                         st.write("")
-                        if st.button(f"Aprovar Créditos", key=f"btn_{ped['id_pedido']}", use_container_width=True):
+                        # O uso de 'get' evita o erro KeyError mesmo que a chave esteja faltando
+                        id_pedido = ped.get('id_pedido', 'sem_id')
+                        if st.button(f"Aprovar Créditos", key=f"btn_{id_pedido}", use_container_width=True):
                             with st.spinner("Atualizando registros no banco de dados..."):
                                 if aprovar_pedido_nuvem(ped['id_pedido']):
                                     st.success("Créditos liberados com sucesso.")
