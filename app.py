@@ -403,15 +403,15 @@ if not st.session_state.autenticado:
             response_raw = requests.post(URL_API_GOOGLE, json={"action": "pedir_codigo", "email": rec_email})
             if response_raw.status_code == 200:
                 response = response_raw.json()
-                    if response.get("success"):
-                        st.success("Código enviado! Verifique seu e-mail.")
-                        st.session_state.email_recuperacao = rec_email
-                    else:
-                        st.error("E-mail não encontrado.")
-                except:
-                    st.error("Não foi possível conectar ao servidor. Tente novamente.")
-            else:
-                st.error("Erro interno ao processar solicitação.")
+                if response.get("success"):
+                    st.success("Código enviado! Verifique seu e-mail.")
+                    st.session_state.email_recuperacao = rec_email
+                else:
+                    st.error("E-mail não encontrado.")
+            except:
+                st.error("Não foi possível conectar ao servidor. Tente novamente.")
+        else:
+            st.error("Erro interno ao processar solicitação.")
 
         # FLUXO 2: Digitar código e nova senha (só aparece se o email for validado)
         if 'email_recuperacao' in st.session_state:
