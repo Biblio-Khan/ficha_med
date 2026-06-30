@@ -1049,13 +1049,17 @@ if st.session_state.user_perfil == "Administrador(a)":
                         st.markdown(f"[Visualizar Imagem do Comprovante]({ped.get('url', '#')})")
                     
                     with col2:
-                        id_pedido = ped.get('id_pedido')
+                        # 1. Obtenha o ID de forma segura
+                        id_pedido = ped.get('id_pedido') 
+    
+                        # 2. Se o ID for None ou vazio, não renderize o botão (evita botões quebrados)
                         if id_pedido:
                             if st.button(f"Aprovar Créditos", key=f"btn_{id_pedido}_{i}", use_container_width=True):
                                 with st.spinner("Atualizando registros no banco de dados..."):
-                                    if aprovar_pedido_nuvem('id_pedido'):
-                                    st.success("Créditos liberados com sucesso.")
-                                    st.rerun()
-                                else:
-                                    st.error("Erro ao tentar atualizar o saldo.")
+                                    # 3. Use a variável id_pedido já verificada
+                                    if aprovar_pedido_nuvem(id_pedido):
+                                       st.success("Créditos liberados com sucesso.")
+                                        st.rerun()
+                                    else:
+                                        st.error("Erro ao tentar atualizar o saldo.")
                         
