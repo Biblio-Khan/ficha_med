@@ -113,8 +113,11 @@ def api_obter_produtividade(email):
 
 # 1. Defina a função primeiro
 def hash_senha(senha):
-    return hashlib.sha256(senha.encode()).hexdigest()
-
+    salt = "minha_chave_secreta_super_segura"
+    # Agora o Python faz exatamente a mesma conta que o Apps Script
+    texto = senha + salt
+    return hashlib.sha256(texto.encode()).hexdigest()
+    
 def cadastrar_novo_usuario(nome, email, senha, perfil):
     payload = {
         "action": "cadastro", "nome": nome.strip(), "email": email.strip().lower(),
