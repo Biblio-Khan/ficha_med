@@ -111,12 +111,16 @@ def api_obter_produtividade(email):
     except:
         return []
 
-# 1. Defina a função primeiro
+import hashlib
+
 def hash_senha(senha):
+    # O salt DEVE ser idêntico ao do Apps Script
     salt = "minha_chave_secreta_super_segura"
-    # Agora o Python faz exatamente a mesma conta que o Apps Script
-    texto = senha + salt
-    return hashlib.sha256(texto.encode()).hexdigest()
+    texto = senha.strip() + salt
+    return hashlib.sha256(texto.encode('utf-8')).hexdigest()
+
+# No cadastro, o payload vai com o hash pronto
+# O Google Apps Script NÃO deve aplicar hash novamente
     
 def cadastrar_novo_usuario(nome, email, senha, perfil):
     payload = {
