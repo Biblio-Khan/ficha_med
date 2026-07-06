@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import hashlib
 import requests
 import io
 import base64
@@ -109,6 +110,10 @@ def api_obter_produtividade(email):
         return []
     except:
         return []
+
+# 1. Defina a função primeiro
+def hash_senha(senha):
+    return hashlib.sha256(senha.encode()).hexdigest()
 
 def cadastrar_novo_usuario(nome, email, senha, perfil):
     payload = {
